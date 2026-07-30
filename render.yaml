@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: starter
     region: frankfurt
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     preDeployCommand: npx prisma migrate deploy && npx prisma db seed
     envVars:
