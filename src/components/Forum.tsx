@@ -8,6 +8,7 @@ type Role = string
 
 export interface ForumCommentApi {
   id: string
+  membreId: string
   contenu: string
   date: string
   auteur: string
@@ -16,6 +17,7 @@ export interface ForumCommentApi {
 
 export interface ForumPostApi {
   id: string
+  membreId: string
   titre: string
   contenu: string
   categorie: ForumCategorieKind
@@ -143,11 +145,14 @@ function PostCard({ post, onOpen }: { post: ForumPostApi; onOpen: () => void }) 
   )
 }
 
-function PostDetail({ post, onClose, onCommentAdded }: { post: ForumPostApi; onClose: () => void; onCommentAdded: (p: ForumPostApi) => void }) {
-  const { user } = useAuth()
+function PostDetail({ post, onClose, onCommentAdded, onDeleted }: { post: ForumPostApi; onClose: () => void; onCommentAdded: (p: ForumPostApi) => void; onDeleted: () => void }) {
+  const { user, hasPermission } = useAuth()
+  const canModerate = hasPermission("forum.moderate")
   const catColor = CAT_COLOR[post.categorie]
   const [reply, setReply] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [deletingPost, setDeletingPost] = useState(false)
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
 
   useEffect(() => {
     fetch(`/api/forum/posts/${post.id}/view`, { method: "POST", credentials: "include" })
@@ -172,18 +177,52 @@ function PostDetail({ post, onClose, onCommentAdded }: { post: ForumPostApi; onC
     }
   }
 
+  async function deletePost() {
+    setDeletingPost(true)
+    try {
+      const res = await fetch(`/api/forum/posts/${post.id}`, { method: "DELETE", credentials: "include" })
+      if (res.ok) onDeleted()
+    } finally {
+      setDeletingPost(false)
+    }
+  }
+
+  async function deleteComment(commentId: string) {
+    setDeletingCommentId(commentId)
+    try {
+      const res = await fetch(`/api/forum/posts/${post.id}/comments/${commentId}`, { method: "DELETE", credentials: "include" })
+      if (res.ok) onCommentAdded(await res.json())
+    } finally {
+      setDeletingCommentId(null)
+    }
+  }
+
+  const canDeletePost = post.membreId === user?.id || canModerate
+
   return (
     <div className="space-y-4">
       {/* Back button */}
-      <button
-        onClick={onClose}
-        className="flex items-center gap-2 font-orbitron text-[11px] tracking-wider transition-colors"
-        style={{ color: "#3d5878" }}
-        onMouseEnter={e => (e.currentTarget.style.color = "#f28c1a")}
-        onMouseLeave={e => (e.currentTarget.style.color = "#3d5878")}
-      >
-        ← RETOUR À LA LISTE
-      </button>
+      <div className="flex items-center justify-between">
+        <button
+          onClick={onClose}
+          className="flex items-center gap-2 font-orbitron text-[11px] tracking-wider transition-colors"
+          style={{ color: "#3d5878" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#f28c1a")}
+          onMouseLeave={e => (e.currentTarget.style.color = "#3d5878")}
+        >
+          ← RETOUR À LA LISTE
+        </button>
+        {canDeletePost && (
+          <button
+            onClick={deletePost}
+            disabled={deletingPost}
+            className="font-orbitron text-[10px] tracking-wider transition-colors disabled:opacity-50"
+            style={{ color: "#e53030" }}
+          >
+            {deletingPost ? "SUPPRESSION…" : "🗑 SUPPRIMER LE POST"}
+          </button>
+        )}
+      </div>
 
       {/* Post */}
       <div
@@ -237,22 +276,35 @@ function PostDetail({ post, onClose, onCommentAdded }: { post: ForumPostApi; onC
         <div className="space-y-3 pl-4" style={{ borderLeft: "1px solid #0c1828" }}>
           {post.comments.map(comment => {
             const cfg = rankCfg(comment.auteurRole)
+            const canDeleteComment = comment.membreId === user?.id || canModerate
             return (
               <div
                 key={comment.id}
                 className="clip-corner-sm p-4"
                 style={{ background: "#060b16", border: "1px solid #0c1828" }}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <Avatar pseudo={comment.auteur} role={comment.auteurRole} />
-                  <div>
-                    <div className="font-jbmono text-[12px]" style={{ color: cfg.color }}>
-                      CMDR {comment.auteur}
-                    </div>
-                    <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>
-                      {comment.auteurRole} · {new Date(comment.date).toLocaleString("fr-FR")}
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Avatar pseudo={comment.auteur} role={comment.auteurRole} />
+                    <div>
+                      <div className="font-jbmono text-[12px]" style={{ color: cfg.color }}>
+                        CMDR {comment.auteur}
+                      </div>
+                      <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>
+                        {comment.auteurRole} · {new Date(comment.date).toLocaleString("fr-FR")}
+                      </div>
                     </div>
                   </div>
+                  {canDeleteComment && (
+                    <button
+                      onClick={() => deleteComment(comment.id)}
+                      disabled={deletingCommentId === comment.id}
+                      className="font-orbitron text-[10px] tracking-wider transition-colors disabled:opacity-50 flex-shrink-0"
+                      style={{ color: "#e53030" }}
+                    >
+                      🗑
+                    </button>
+                  )}
                 </div>
                 <div className="font-jbmono text-[12px] leading-relaxed pl-10" style={{ color: "#8aabca" }}>
                   {comment.contenu}
@@ -316,6 +368,12 @@ export default function Forum() {
 
   function handlePostUpdated(updated: ForumPostApi) {
     setPosts(prev => prev.map(p => p.id === updated.id ? updated : p))
+  }
+
+  function handlePostDeleted() {
+    if (!openId) return
+    setPosts(prev => prev.filter(p => p.id !== openId))
+    setOpenId(null)
   }
 
   if (loading) {
@@ -387,7 +445,7 @@ export default function Forum() {
       )}
 
       {openPost && (
-        <PostDetail post={openPost} onClose={() => setOpenId(null)} onCommentAdded={handlePostUpdated} />
+        <PostDetail post={openPost} onClose={() => setOpenId(null)} onCommentAdded={handlePostUpdated} onDeleted={handlePostDeleted} />
       )}
 
       {showNewPost && (

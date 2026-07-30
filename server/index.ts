@@ -245,6 +245,7 @@ type ForumPostWithRelations = Prisma.ForumPostGetPayload<{
 function toPublicPost(p: ForumPostWithRelations) {
   return {
     id: p.id,
+    membreId: p.memberId,
     titre: p.title,
     contenu: p.content,
     categorie: p.categorie,
@@ -256,6 +257,7 @@ function toPublicPost(p: ForumPostWithRelations) {
     nbCommentaires: p._count.comments,
     comments: p.comments.map(c => ({
       id: c.id,
+      membreId: c.memberId,
       contenu: c.content,
       date: c.createdAt,
       auteur: c.member.pseudo,
@@ -1846,6 +1848,43 @@ app.post('/api/forum/posts/:id/view', requireAuth, async (req, res) => {
     }
     throw err;
   }
+});
+
+// Auteur du post OU membre habilité 'forum.moderate' — supprime aussi ses commentaires (cascade).
+app.delete('/api/forum/posts/:id', requireAuth, async (req, res) => {
+  const post = await prisma.forumPost.findUnique({ where: { id: req.params.id as string } });
+  if (!post) {
+    res.status(404).json({ error: 'Post introuvable.' });
+    return;
+  }
+  if (post.memberId !== req.user!.sub) {
+    const canModerate = await memberHasPermission(prisma, req.user!.roleId, 'forum.moderate');
+    if (!canModerate) {
+      res.status(403).json({ error: 'Vous ne pouvez supprimer que vos propres messages.' });
+      return;
+    }
+  }
+  await prisma.forumPost.delete({ where: { id: post.id } });
+  res.status(204).end();
+});
+
+// Auteur du commentaire OU membre habilité 'forum.moderate'.
+app.delete('/api/forum/posts/:postId/comments/:commentId', requireAuth, async (req, res) => {
+  const comment = await prisma.forumComment.findUnique({ where: { id: req.params.commentId as string } });
+  if (!comment || comment.postId !== req.params.postId) {
+    res.status(404).json({ error: 'Commentaire introuvable.' });
+    return;
+  }
+  if (comment.memberId !== req.user!.sub) {
+    const canModerate = await memberHasPermission(prisma, req.user!.roleId, 'forum.moderate');
+    if (!canModerate) {
+      res.status(403).json({ error: 'Vous ne pouvez supprimer que vos propres commentaires.' });
+      return;
+    }
+  }
+  await prisma.forumComment.delete({ where: { id: comment.id } });
+  const post = await prisma.forumPost.findUniqueOrThrow({ where: { id: req.params.postId as string }, include: forumPostInclude });
+  res.json(toPublicPost(post));
 });
 
 // ─── Notes privées ─────────────────────────────────────────────────────────
