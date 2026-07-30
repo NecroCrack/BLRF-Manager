@@ -186,6 +186,10 @@ model ColonisationSite {
   siteType      String
   progressPct   Float?
   statusText    String?
+  // MarketID du journal Elite Dangerous (identifiant stable d'un dépôt de construction,
+  // contrairement au nom qui peut changer une fois le site terminé). Nul pour les sites
+  // ajoutés manuellement avant tout rapport du plugin EDMC.
+  marketId      String?  @unique
   lastUpdatedAt DateTime @default(now())
   addedById     String
   addedBy       Member   @relation(fields: [addedById], references: [id])
@@ -251,13 +255,25 @@ model ShipBuild {
   member         Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
   nom            String
   vaisseauModele String
-  urlCoriolis    String
+  // Optionnel désormais : absent pour un build alimenté par le plugin EDMC ou importé au format
+  // SLEF (le module en tient lieu). Toujours requis pour un build purement manuel.
+  urlCoriolis    String?
   role           ShipRole    @default(MULTIROLE)
   portee         String?
   notes          String?
   status         BuildStatus @default(EN_ATTENTE)
   dateImport     DateTime    @default(now())
+  // Modules détaillés (événement journal Loadout), poussés automatiquement par le plugin EDMC ou
+  // collés manuellement au format SLEF. Nul pour un build purement manuel (lien Coriolis seul).
+  modules        Json?
+  // ShipID interne du jeu (emplacement du hangar, stable pour UN vaisseau physique tant qu'il
+  // n'est pas vendu) — clé de dédoublonnage pour les mises à jour automatiques du plugin, qui
+  // remplacent le build existant plutôt que d'en créer un nouveau à chaque changement de module.
+  // Nul pour un build manuel ou importé en SLEF (jamais mis à jour automatiquement).
+  shipId         Int?
   comments       BuildComment[]
+
+  @@unique([memberId, shipId])
 }
 
 // Retour d'un membre habilité (droit builds.approve) sur un build — même forme que ForumComment.

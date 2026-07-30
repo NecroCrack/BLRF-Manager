@@ -12,18 +12,32 @@ export interface BuildCommentApi {
   reviewer: string
 }
 
+export interface LoadoutModuleApi {
+  slot: string
+  item: string
+  name: string
+  class: string | null
+  rating: string | null
+  on: boolean
+  priority: number | null
+}
+
 export interface ShipBuildApi {
   id: string
   membreId: string
   membre: string
   nom: string
   vaisseauModele: string
-  lienCoriolis: string
+  lienCoriolis: string | null
   role: ShipRoleKind
   portee: string | null
   notes: string | null
   status: BuildStatusKind
   dateImport: string
+  modules: LoadoutModuleApi[] | null
+  // true si ce build est alimenté automatiquement par le plugin EDMC (mis à jour à chaque
+  // changement en jeu) — false pour un build purement manuel ou importé une fois en SLEF.
+  autoPlugin: boolean
   comments: BuildCommentApi[]
 }
 
@@ -74,6 +88,11 @@ function BuildCard({ build, selected, onSelect }: { build: ShipBuildApi; selecte
           <span className="font-orbitron text-[9px] px-1 py-0.5 clip-corner-sm" style={{ color: status.color, background: `${status.color}12` }}>
             {status.label.toUpperCase()}
           </span>
+          {build.autoPlugin && (
+            <span className="font-orbitron text-[9px] px-1 py-0.5 clip-corner-sm" style={{ color: "#0fc882", background: "rgba(15,200,130,0.1)" }}>
+              AUTO
+            </span>
+          )}
         </div>
       </div>
 
@@ -101,18 +120,20 @@ function BuildCard({ build, selected, onSelect }: { build: ShipBuildApi; selecte
         </span>
         <div className="flex items-center gap-2">
           <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>{build.dateImport.slice(0, 10)}</span>
-          <a
-            href={build.lienCoriolis}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={e => e.stopPropagation()}
-            className="font-orbitron text-[10px] px-2 py-0.5 clip-corner-sm transition-all"
-            style={{ color: "#2196f3", border: "1px solid rgba(33,150,243,0.3)", background: "rgba(33,150,243,0.08)" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(33,150,243,0.15)" }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(33,150,243,0.08)" }}
-          >
-            CORIOLIS ↗
-          </a>
+          {build.lienCoriolis && (
+            <a
+              href={build.lienCoriolis}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="font-orbitron text-[10px] px-2 py-0.5 clip-corner-sm transition-all"
+              style={{ color: "#2196f3", border: "1px solid rgba(33,150,243,0.3)", background: "rgba(33,150,243,0.08)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(33,150,243,0.15)" }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(33,150,243,0.08)" }}
+            >
+              CORIOLIS ↗
+            </a>
+          )}
         </div>
       </div>
     </div>
@@ -314,6 +335,33 @@ export default function Builds() {
                 ))}
               </div>
 
+              {selected.modules && selected.modules.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>MODULES ({selected.modules.length})</div>
+                    {selected.autoPlugin && (
+                      <span className="font-jbmono text-[10px]" style={{ color: "#0fc882" }}>synchronisé par le plugin</span>
+                    )}
+                  </div>
+                  <div className="space-y-1 max-h-56 overflow-y-auto scrollable">
+                    {selected.modules.map((m, i) => (
+                      <div
+                        key={`${m.slot}-${i}`}
+                        className="flex items-center justify-between gap-2 px-2.5 py-1.5 clip-corner-sm"
+                        style={{ background: "#040810", border: "1px solid #0c1828", opacity: m.on ? 1 : 0.45 }}
+                      >
+                        <span className="font-jbmono text-[11px] truncate" style={{ color: "#8aabca" }}>{m.name}</span>
+                        {(m.class || m.rating) && (
+                          <span className="font-jbmono text-[10px] flex-shrink-0" style={{ color: "#3d5878" }}>
+                            {m.class ?? ""}{m.rating ?? ""}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {selected.notes && (
                 <div className="mb-4">
                   <div className="font-jbmono text-[11px] mb-2" style={{ color: "#3d5878" }}>NOTES</div>
@@ -394,17 +442,19 @@ export default function Builds() {
                 )}
               </div>
 
-              <a
-                href={selected.lienCoriolis}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full block text-center font-orbitron text-[11px] py-2.5 clip-corner-sm tracking-widest transition-all mb-2"
-                style={{ color: "#2196f3", border: "1px solid rgba(33,150,243,0.35)", background: "rgba(33,150,243,0.08)" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "rgba(33,150,243,0.15)" }}
-                onMouseLeave={e => { e.currentTarget.style.background = "rgba(33,150,243,0.08)" }}
-              >
-                OUVRIR DANS CORIOLIS ↗
-              </a>
+              {selected.lienCoriolis && (
+                <a
+                  href={selected.lienCoriolis}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full block text-center font-orbitron text-[11px] py-2.5 clip-corner-sm tracking-widest transition-all mb-2"
+                  style={{ color: "#2196f3", border: "1px solid rgba(33,150,243,0.35)", background: "rgba(33,150,243,0.08)" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(33,150,243,0.15)" }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(33,150,243,0.08)" }}
+                >
+                  OUVRIR DANS CORIOLIS ↗
+                </a>
+              )}
 
               {canDelete && (
                 <button

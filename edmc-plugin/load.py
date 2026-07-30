@@ -32,8 +32,12 @@ CFG_TOKEN = "blrf_api_token"
 LOCATION_EVENTS = {"FSDJump", "Location", "CarrierJump"}
 
 # Nom d'événement journal pour la progression d'un chantier de colonisation.
-# À vérifier/ajuster si Frontier fait évoluer le format — l'extraction ci-dessous
-# reste défensive (jamais de plantage sur un champ manquant ou renommé).
+# Format confirmé (schéma communautaire EDCD + forums Frontier, 30/07/2026) : l'événement
+# ne contient QUE MarketID/ConstructionProgress/ConstructionComplete/ConstructionFailed/
+# ResourcesRequired — ni StarSystem ni StationName ni StationType. Ces trois derniers sont
+# donc lus depuis `state` (suivi en continu par EDMC via l'événement Docked), pas depuis
+# l'entrée elle-même. L'extraction de la progression reste défensive malgré tout (jamais
+# de plantage sur un champ manquant ou renommé si Frontier fait évoluer le format).
 COLONISATION_EVENT = "ColonisationConstructionDepot"
 
 server_url_var = None
@@ -130,11 +134,20 @@ def journal_entry(cmdr, is_beta, system, station, entry, state):
     if event in LOCATION_EVENTS and entry.get("StarSystem"):
         _post("/api/plugin/location", {"systemName": entry["StarSystem"]})
 
-    elif event == COLONISATION_EVENT and (system or entry.get("StarSystem")):
+    elif event == "Loadout":
+        # L'événement contient déjà tout ce qu'il faut (Ship, ShipID, ShipName, ShipIdent,
+        # Modules) — même forme que le format communautaire SLEF, transmis tel quel au serveur
+        # qui le normalise (voir server/edLoadout.ts). Se déclenche à chaque montée à bord, achat
+        # de module ou changement d'ingénierie.
+        _post("/api/plugin/build", entry)
+
+    elif event == COLONISATION_EVENT and (system or state.get("SystemName")):
+        market_id = entry.get("MarketID") or state.get("MarketID")
         _post("/api/plugin/colonisation", {
-            "systemName": system or entry.get("StarSystem"),
-            "name": station or entry.get("StationName") or "Site de colonisation",
-            "siteType": entry.get("StationType") or "Inconnu",
+            "systemName": system or state.get("SystemName"),
+            "name": station or state.get("StationName") or "Site de colonisation",
+            "siteType": state.get("StationType") or "Inconnu",
+            "marketId": str(market_id) if market_id else None,
             "progressPct": _extract_progress_pct(entry),
             "statusText": "Terminé" if entry.get("ConstructionComplete") else None,
         })

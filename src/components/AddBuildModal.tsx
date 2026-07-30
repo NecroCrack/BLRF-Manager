@@ -16,19 +16,40 @@ export default function AddBuildModal({ onClose, onCreated }: { onClose: () => v
   const [role, setRole] = useState<ShipRoleKind>("MULTIROLE")
   const [portee, setPortee] = useState("")
   const [notes, setNotes] = useState("")
+  const [showSlef, setShowSlef] = useState(false)
+  const [slefText, setSlefText] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+
+    let loadout: unknown
+    if (showSlef && slefText.trim()) {
+      try {
+        loadout = JSON.parse(slefText)
+      } catch {
+        setError("Le loadout SLEF collé n'est pas un JSON valide.")
+        return
+      }
+    }
+
     setSubmitting(true)
     try {
       const res = await fetch("/api/builds", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ nom, vaisseauModele, lienCoriolis, role, portee: portee || undefined, notes: notes || undefined }),
+        body: JSON.stringify({
+          nom,
+          vaisseauModele: vaisseauModele || undefined,
+          lienCoriolis: lienCoriolis || undefined,
+          role,
+          portee: portee || undefined,
+          notes: notes || undefined,
+          loadout,
+        }),
       })
       const data = await res.json().catch(() => null)
       if (!res.ok) {
@@ -60,9 +81,11 @@ export default function AddBuildModal({ onClose, onCreated }: { onClose: () => v
           </div>
 
           <div className="mb-3">
-            <label className="font-orbitron text-[11px] tracking-widest block mb-1.5" style={{ color: "#3d5878" }}>MODÈLE DE VAISSEAU</label>
+            <label className="font-orbitron text-[11px] tracking-widest block mb-1.5" style={{ color: "#3d5878" }}>
+              MODÈLE DE VAISSEAU{showSlef && slefText.trim() ? " (OPTIONNEL — déduit du loadout)" : ""}
+            </label>
             <input
-              value={vaisseauModele} onChange={e => setVaisseauModele(e.target.value)} required
+              value={vaisseauModele} onChange={e => setVaisseauModele(e.target.value)} required={!(showSlef && slefText.trim())}
               placeholder="Ex. Anaconda"
               className="w-full font-jbmono text-[14px] bg-transparent outline-none px-3 py-2 clip-corner-sm"
               style={{ color: "#8aabca", border: "1px solid #12223a" }}
@@ -70,13 +93,39 @@ export default function AddBuildModal({ onClose, onCreated }: { onClose: () => v
           </div>
 
           <div className="mb-3">
-            <label className="font-orbitron text-[11px] tracking-widest block mb-1.5" style={{ color: "#3d5878" }}>LIEN CORIOLIS</label>
+            <label className="font-orbitron text-[11px] tracking-widest block mb-1.5" style={{ color: "#3d5878" }}>
+              LIEN CORIOLIS{showSlef ? " (OPTIONNEL)" : ""}
+            </label>
             <input
-              value={lienCoriolis} onChange={e => setLienCoriolis(e.target.value)} required type="url"
+              value={lienCoriolis} onChange={e => setLienCoriolis(e.target.value)} required={!showSlef} type="url"
               placeholder="https://coriolis.io/outfit/..."
               className="w-full font-jbmono text-[14px] bg-transparent outline-none px-3 py-2 clip-corner-sm"
               style={{ color: "#8aabca", border: "1px solid #12223a" }}
             />
+          </div>
+
+          <div className="mb-3">
+            <button
+              type="button"
+              onClick={() => setShowSlef(v => !v)}
+              className="font-orbitron text-[10px] tracking-widest transition-colors"
+              style={{ color: showSlef ? "#f28c1a" : "#3d5878" }}
+            >
+              {showSlef ? "▾" : "▸"} OU IMPORTER UN LOADOUT (SLEF, EXPORTÉ DE CORIOLIS/EDSY)
+            </button>
+            {showSlef && (
+              <div className="mt-2">
+                <textarea
+                  value={slefText} onChange={e => setSlefText(e.target.value)} rows={5}
+                  placeholder='{"Ship": "anaconda", "Modules": [...]}'
+                  className="w-full font-jbmono text-[11px] bg-transparent outline-none px-3 py-2 clip-corner-sm resize-none"
+                  style={{ color: "#8aabca", border: "1px solid #12223a" }}
+                />
+                <div className="font-jbmono text-[10px] mt-1" style={{ color: "#3d5878" }}>
+                  Remplit le modèle de vaisseau et la liste de modules automatiquement. Le lien Coriolis reste optionnel dans ce cas.
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mb-3">

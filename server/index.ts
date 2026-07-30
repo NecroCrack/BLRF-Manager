@@ -22,6 +22,7 @@ import { createPluginAuthMiddleware, generatePluginToken, hashPluginToken } from
 import { generateStrongPassword } from './passwords';
 import { encrypt } from './crypto';
 import { startInaraSyncCron } from './cron';
+import { parseLoadout, canonicalJson } from './edLoadout';
 
 dotenv.config();
 
@@ -220,6 +221,8 @@ function toPublicBuild(b: ShipBuildWithRelations) {
     notes: b.notes,
     status: b.status,
     dateImport: b.dateImport,
+    modules: b.modules as import('./edLoadout').PublicLoadoutModule[] | null,
+    autoPlugin: b.shipId !== null,
     comments: b.comments.map(c => ({
       id: c.id,
       contenu: c.content,
@@ -754,11 +757,12 @@ app.post('/api/plugin/location', requirePluginToken, async (req, res) => {
 });
 
 app.post('/api/plugin/colonisation', requirePluginToken, async (req, res) => {
-  const { systemName, name, siteType, progressPct, statusText } = req.body ?? {};
+  const { systemName, name, siteType, progressPct, statusText, marketId } = req.body ?? {};
   if (typeof systemName !== 'string' || !systemName.trim() || typeof name !== 'string' || !name.trim() || typeof siteType !== 'string' || !siteType.trim()) {
     res.status(400).json({ error: 'Système, nom et type de site requis.' });
     return;
   }
+  const marketIdStr = typeof marketId === 'string' || typeof marketId === 'number' ? String(marketId).trim() : null;
 
   let coords: EdsmSystem | null;
   try {
@@ -778,7 +782,13 @@ app.post('/api/plugin/colonisation', requirePluginToken, async (req, res) => {
     create: { name: coords.name, coordX: coords.coordX, coordY: coords.coordY, coordZ: coords.coordZ },
   });
 
-  const existing = await prisma.colonisationSite.findFirst({ where: { systemId: system.id, name: name.trim() } });
+  // Le MarketID (identifiant stable du dépôt côté jeu) est prioritaire sur le nom : un site
+  // peut être renommé une fois la construction terminée, ce que le nom seul ne peut pas suivre.
+  // Repli sur systemId+name pour les sites ajoutés manuellement avant tout rapport du plugin.
+  const existing = marketIdStr
+    ? (await prisma.colonisationSite.findUnique({ where: { marketId: marketIdStr } }))
+      ?? (await prisma.colonisationSite.findFirst({ where: { systemId: system.id, name: name.trim() } }))
+    : await prisma.colonisationSite.findFirst({ where: { systemId: system.id, name: name.trim() } });
 
   if (!existing) {
     const canAdd = await memberHasPermission(prisma, req.pluginMember!.roleId, 'colonisation.add');
@@ -793,6 +803,7 @@ app.post('/api/plugin/colonisation', requirePluginToken, async (req, res) => {
         siteType: siteType.trim(),
         progressPct: typeof progressPct === 'number' ? progressPct : null,
         statusText: typeof statusText === 'string' ? statusText.trim() : null,
+        marketId: marketIdStr,
         addedById: req.pluginMember!.id,
       },
       include: colonisationSiteInclude,
@@ -804,13 +815,54 @@ app.post('/api/plugin/colonisation', requirePluginToken, async (req, res) => {
   const updated = await prisma.colonisationSite.update({
     where: { id: existing.id },
     data: {
+      name: name.trim(),
+      siteType: siteType.trim(),
       progressPct: typeof progressPct === 'number' ? progressPct : existing.progressPct,
       statusText: typeof statusText === 'string' ? statusText.trim() : existing.statusText,
+      // Backfill : rattache un site ajouté manuellement (sans marketId) au premier rapport du plugin.
+      marketId: existing.marketId ?? marketIdStr,
       lastUpdatedAt: new Date(),
     },
     include: colonisationSiteInclude,
   });
   res.json(toPublicColonisationSite(updated));
+});
+
+// Le plugin pousse la configuration du vaisseau actuel à chaque événement "Loadout" (montée à
+// bord, changement de module, ravitaillement...). Dédoublonné par (memberId, shipId) : un même
+// vaisseau physique met à jour son build existant plutôt que d'en créer un nouveau à chaque
+// changement — voir @@unique sur ShipBuild dans schema.prisma. Un changement de modules remet le
+// statut en attente (une approbation précédente ne reflète plus la configuration actuelle).
+app.post('/api/plugin/build', requirePluginToken, async (req, res) => {
+  const parsed = parseLoadout(req.body);
+  if (!parsed || parsed.shipId === null) {
+    res.status(400).json({ error: 'Loadout invalide (ShipID manquant).' });
+    return;
+  }
+
+  const existing = await prisma.shipBuild.findUnique({
+    where: { memberId_shipId: { memberId: req.pluginMember!.id, shipId: parsed.shipId } },
+  });
+
+  const modulesChanged = !existing || canonicalJson(existing.modules) !== canonicalJson(parsed.modules);
+
+  const build = await prisma.shipBuild.upsert({
+    where: { memberId_shipId: { memberId: req.pluginMember!.id, shipId: parsed.shipId } },
+    create: {
+      memberId: req.pluginMember!.id,
+      nom: parsed.shipName ? `${parsed.shipName} (${parsed.shipDisplayName})` : parsed.shipDisplayName,
+      vaisseauModele: parsed.shipDisplayName,
+      shipId: parsed.shipId,
+      modules: parsed.modules as unknown as Prisma.InputJsonValue,
+    },
+    update: {
+      vaisseauModele: parsed.shipDisplayName,
+      modules: parsed.modules as unknown as Prisma.InputJsonValue,
+      ...(modulesChanged && { status: 'EN_ATTENTE' as BuildStatus }),
+    },
+    include: buildInclude,
+  });
+  res.status(existing ? 200 : 201).json(toPublicBuild(build));
 });
 
 app.get('/api/colonisation', requireAuth, async (req, res) => {
@@ -1220,34 +1272,63 @@ app.get('/api/builds', requireAuth, async (req, res) => {
   res.json(builds.map(toPublicBuild));
 });
 
+// `loadout` (optionnel) : JSON collé par le membre au format SLEF, exporté depuis Coriolis ou
+// EDSY — même forme que l'événement journal "Loadout" (voir server/edLoadout.ts). Remplit
+// vaisseauModele et la liste de modules automatiquement. Soit un lien Coriolis, soit un loadout,
+// est requis (pas les deux à vide).
 app.post('/api/builds', requireAuth, async (req, res) => {
-  const { nom, vaisseauModele, lienCoriolis, role, portee, notes } = req.body ?? {};
+  const { nom, vaisseauModele, lienCoriolis, role, portee, notes, loadout } = req.body ?? {};
 
-  if (typeof nom !== 'string' || !nom.trim() || typeof vaisseauModele !== 'string' || !vaisseauModele.trim()) {
-    res.status(400).json({ error: 'Nom du build et modèle de vaisseau requis.' });
+  if (typeof nom !== 'string' || !nom.trim()) {
+    res.status(400).json({ error: 'Nom du build requis.' });
     return;
   }
-  if (typeof lienCoriolis !== 'string') {
-    res.status(400).json({ error: 'Lien Coriolis requis.' });
+
+  let parsedLoadout: ReturnType<typeof parseLoadout> = null;
+  if (loadout !== undefined) {
+    parsedLoadout = parseLoadout(loadout);
+    if (!parsedLoadout) {
+      res.status(400).json({ error: 'Format SLEF invalide (JSON de loadout attendu, avec au minimum "Ship" et "Modules").' });
+      return;
+    }
+  }
+
+  const hasLink = typeof lienCoriolis === 'string' && lienCoriolis.trim();
+  if (!hasLink && !parsedLoadout) {
+    res.status(400).json({ error: 'Lien Coriolis ou loadout SLEF requis.' });
     return;
   }
-  try {
-    new URL(lienCoriolis);
-  } catch {
-    res.status(400).json({ error: 'Le lien Coriolis doit être une URL valide.' });
+  if (hasLink) {
+    try {
+      new URL(lienCoriolis);
+    } catch {
+      res.status(400).json({ error: 'Le lien Coriolis doit être une URL valide.' });
+      return;
+    }
+  }
+
+  const finalVaisseau = typeof vaisseauModele === 'string' && vaisseauModele.trim()
+    ? vaisseauModele.trim()
+    : parsedLoadout?.shipDisplayName;
+  if (!finalVaisseau) {
+    res.status(400).json({ error: 'Modèle de vaisseau requis.' });
     return;
   }
+
   const buildRole = typeof role === 'string' && SHIP_ROLES.includes(role as ShipRole) ? (role as ShipRole) : 'MULTIROLE';
 
   const build = await prisma.shipBuild.create({
     data: {
       memberId: req.user!.sub,
       nom: nom.trim(),
-      vaisseauModele: vaisseauModele.trim(),
-      urlCoriolis: lienCoriolis.trim(),
+      vaisseauModele: finalVaisseau,
+      urlCoriolis: hasLink ? lienCoriolis.trim() : null,
       role: buildRole,
       portee: typeof portee === 'string' && portee.trim() ? portee.trim() : null,
       notes: typeof notes === 'string' && notes.trim() ? notes.trim() : null,
+      modules: parsedLoadout ? (parsedLoadout.modules as unknown as Prisma.InputJsonValue) : undefined,
+      // Pas de shipId ici volontairement : un import SLEF manuel est un instantané figé, jamais
+      // remplacé automatiquement par le plugin (qui dédoublonne, lui, par memberId+shipId).
     },
     include: buildInclude,
   });

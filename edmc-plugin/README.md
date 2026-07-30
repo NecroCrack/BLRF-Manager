@@ -1,11 +1,12 @@
 # Plugin EDMC — BLRF Squadron Manager
 
-Ce plugin pour [EDMC](https://github.com/EDCD/EDMarketConnector) (Elite Dangerous Market Connector) alimente automatiquement deux fonctionnalités de l'application :
+Ce plugin pour [EDMC](https://github.com/EDCD/EDMarketConnector) (Elite Dangerous Market Connector) alimente automatiquement trois fonctionnalités de l'application :
 
 - **Onglet Membres** : votre système actuel, mis à jour à chaque saut.
 - **Onglet Colonisation** : la progression des chantiers de construction quand vous êtes à quai dessus.
+- **Onglet Builds (hangar)** : la configuration (modules) de votre vaisseau actuel, mise à jour à chaque montée à bord ou changement de module. Un vaisseau physique donné correspond toujours au même build dans l'appli — il est mis à jour, jamais dupliqué. Un changement de modules remet le build "en attente" (une précédente approbation ne reflète plus la configuration actuelle).
 
-Aucune de ces deux fonctionnalités ne peut être alimentée sans ce plugin (ni Inara, ni aucune API publique ne fournit ces informations de façon fiable pour un suivi d'escadron).
+Aucune de ces fonctionnalités ne peut être alimentée sans ce plugin (ni Inara, ni aucune API publique ne fournit ces informations de façon fiable pour un suivi d'escadron). Le lien Coriolis reste utile pour partager un build théorique pas encore volé — voir "Importer un loadout (SLEF)" dans le formulaire d'ajout de build de l'appli, qui accepte aussi un JSON exporté depuis Coriolis ou EDSY sans passer par le plugin.
 
 ## Installation
 
