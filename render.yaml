@@ -1,0 +1,28 @@
+services:
+  - name: blrf-squadron-manager
+    type: web
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    preDeployCommand: npx prisma migrate deploy && npx prisma db seed
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: blrf-db
+          property: connectionString
+
+databases:
+  - name: blrf-db
+    plan: basic-256mb
+    databaseName: blrf_escadron
+    user: blrf_app

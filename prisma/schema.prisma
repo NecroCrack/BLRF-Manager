@@ -1,0 +1,312 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MissionStatus {
+  EN_COURS
+  COMPLETE
+  ARCHIVE
+}
+
+enum MissionType {
+  COMBAT
+  EXPLORATION
+  LOGISTIQUE
+  ESCORTE
+  INTERNE
+}
+
+enum WaypointType {
+  BASE
+  OBJECTIF
+  RAVITAILLEMENT
+  AUTRE
+}
+
+enum ShipRole {
+  COMBAT
+  EXPLORATION
+  MINAGE
+  TRANSPORT
+  MULTIROLE
+}
+
+enum ForumCategorie {
+  OPERATIONS
+  TACTIQUE
+  INGENIERIE
+  GENERAL
+  ANNONCES
+}
+
+enum BuildStatus {
+  EN_ATTENTE
+  APPROUVE
+  REJETE
+}
+
+// Configuration mono-ligne de l'escadron (id fixe "singleton").
+model Squadron {
+  id          String @id @default("singleton")
+  nom         String
+  tag         String
+  description String
+  fondation   String
+}
+
+model Member {
+  id           String    @id @default(uuid())
+  matricule    String    @unique
+  pseudo       String    @unique
+  passwordHash String
+  roleId       String
+  role         Role      @relation(fields: [roleId], references: [id])
+  dateJoin     DateTime  @default(now())
+  actif        Boolean   @default(true)
+  lastSeenAt   DateTime?
+
+  // Texte libre saisi à la main (legacy) — masqué côté client dès que localisationAuto=true.
+  localisation          String?
+  localisationSystemId  String?
+  localisationSystem    System?   @relation("MemberLocalisation", fields: [localisationSystemId], references: [id], onDelete: SetNull)
+  localisationUpdatedAt DateTime?
+  localisationAuto      Boolean   @default(false)
+  vaisseau       String?
+  vaisseauModele String?
+  specialite     String?
+  combats        Int     @default(0)
+  explorations   Int     @default(0)
+  commerce       Int     @default(0)
+
+  syncTokens  ExternalSync?
+  apiToken    MemberApiToken?
+
+  waypoints           Waypoint[]
+  builds              ShipBuild[]
+  buildComments       BuildComment[]
+  forumPosts          ForumPost[]
+  forumComments       ForumComment[]
+  notes               PrivateNote[]
+  missionsResponsable Mission[]         @relation("MissionResponsable")
+  missionsAssigned    MissionAssignee[]
+  messagesSent        Message[]         @relation("MessageSender")
+  messagesReceived    Message[]         @relation("MessageRecipient")
+  colonisationSitesAdded ColonisationSite[]
+}
+
+// Catalogue fixe des droits possibles (défini en code, seedé en base).
+model Permission {
+  key             String           @id
+  label           String
+  category        String
+  rolePermissions RolePermission[]
+}
+
+// Rôle personnalisé défini par le commandant : nom + rang d'affichage.
+// "protege" = rôle COMMANDANT seedé, non supprimable/renommable (garantit un super-admin).
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  rang        Int
+  protege     Boolean          @default(false)
+  members     Member[]
+  permissions RolePermission[]
+}
+
+model RolePermission {
+  roleId        String
+  role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionKey String
+  permission    Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+  granted       Boolean    @default(true)
+
+  @@id([roleId, permissionKey])
+}
+
+// Jeton porteur pour le plugin EDMC (voir edmc-plugin/). Hashé (SHA-256), pas chiffré :
+// c'est un identifiant d'authentification, pas un secret tiers à relayer comme inaraToken.
+model MemberApiToken {
+  id         String    @id @default(uuid())
+  memberId   String    @unique
+  member     Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+}
+
+model ExternalSync {
+  id                 String    @id @default(uuid())
+  memberId           String    @unique
+  member             Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  inaraToken         String? // Chiffré (AES-256-GCM) via server/crypto.ts, jamais en clair
+  inaraCommanderName String? // Nom CMDR Inara, peut différer du pseudo de l'escadron
+  inaraLastSyncAt    DateTime?
+  inaraLastSyncOk    Boolean?
+  frontierAuth       String? // Tokens OAuth JSON, chiffrés (Phase 4+ future, non implémenté)
+}
+
+// Entité : Un système stellaire physique avec ses coordonnées
+model System {
+  id     String @id @default(uuid())
+  name   String @unique
+  coordX Float
+  coordY Float
+  coordZ Float
+
+  waypoints           Waypoint[]
+  missions            Mission[]
+  membresLocalises    Member[]           @relation("MemberLocalisation")
+  colonisationSites   ColonisationSite[]
+}
+
+// Site de colonisation suivi par l'escadron — progression alimentée automatiquement
+// par le plugin EDMC (voir edmc-plugin/) une fois le système ajouté par un membre habilité.
+model ColonisationSite {
+  id            String   @id @default(uuid())
+  systemId      String
+  system        System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  name          String
+  siteType      String
+  progressPct   Float?
+  statusText    String?
+  lastUpdatedAt DateTime @default(now())
+  addedById     String
+  addedBy       Member   @relation(fields: [addedById], references: [id])
+}
+
+// Entité : Un marqueur ajouté par l'escadron sur un système
+model Waypoint {
+  id          String       @id @default(uuid())
+  systemId    String
+  system      System       @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   Member       @relation(fields: [createdById], references: [id])
+  type        WaypointType @default(AUTRE)
+  marker      String?
+  pinned      Boolean      @default(false)
+  timestamp   DateTime     @default(now())
+}
+
+model Mission {
+  id             String        @id @default(uuid())
+  title          String
+  description    String
+  status         MissionStatus @default(EN_COURS)
+  priorite       Int           @default(3)
+  type           MissionType   @default(INTERNE)
+  systeme        String?
+  systemId       String?
+  system         System?       @relation(fields: [systemId], references: [id], onDelete: SetNull)
+  responsableId  String?
+  responsable    Member?       @relation("MissionResponsable", fields: [responsableId], references: [id])
+  createdAt      DateTime      @default(now())
+  dateCompletion DateTime?
+
+  // Panneaux d'info live du dashboard : null = hérite du défaut du tableau de bord.
+  showEdsmPanel         Boolean?
+  showMemberStatusPanel Boolean?
+
+  assignees MissionAssignee[]
+}
+
+// Membres assignés à une mission (distinct du "responsable" unique) — sert au
+// panneau "statut des membres assignés" du tableau de bord.
+model MissionAssignee {
+  missionId String
+  mission   Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([missionId, memberId])
+}
+
+// Préférences d'épinglage du tableau de bord — globales à l'escadron (gérées par
+// les membres avec le droit dashboard.manage), pas par utilisateur consultant.
+model DashboardPreference {
+  id               String   @id @default("singleton")
+  pinnedMissionIds String[] @default([])
+  pinnedSystemIds  String[] @default([])
+}
+
+model ShipBuild {
+  id             String      @id @default(uuid())
+  memberId       String
+  member         Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  nom            String
+  vaisseauModele String
+  urlCoriolis    String
+  role           ShipRole    @default(MULTIROLE)
+  portee         String?
+  notes          String?
+  status         BuildStatus @default(EN_ATTENTE)
+  dateImport     DateTime    @default(now())
+  comments       BuildComment[]
+}
+
+// Retour d'un membre habilité (droit builds.approve) sur un build — même forme que ForumComment.
+model BuildComment {
+  id        String    @id @default(uuid())
+  buildId   String
+  build     ShipBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  reviewerId String
+  reviewer  Member    @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime  @default(now())
+}
+
+model ForumPost {
+  id        String         @id @default(uuid())
+  memberId  String
+  member    Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  categorie ForumCategorie @default(GENERAL)
+  epingle   Boolean        @default(false)
+  vues      Int            @default(0)
+  createdAt DateTime       @default(now())
+  comments  ForumComment[]
+}
+
+model ForumComment {
+  id        String    @id @default(uuid())
+  postId    String
+  post      ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime  @default(now())
+}
+
+// Messagerie privée membre à membre : texte seul, aucune pièce jointe.
+// Volume négligeable à l'échelle d'un escadron (pas de rétention/purge nécessaire).
+model Message {
+  id          String    @id @default(uuid())
+  senderId    String
+  sender      Member    @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   Member    @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  content     String
+  createdAt   DateTime  @default(now())
+  luAt        DateTime?
+
+  @@index([senderId, recipientId])
+  @@index([recipientId, senderId])
+}
+
+model PrivateNote {
+  id        String   @id @default(uuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  titre     String
+  categorie String   @default("Personnel")
+  content   String
+  createdAt DateTime @default(now())
+  dateMaj   DateTime @updatedAt
+}

@@ -1,0 +1,14 @@
+node_modules
+# Keep environment variables out of version control
+.env
+
+/generated/prisma
+
+# Build output (régénéré par Render au déploiement, ne doit pas être commité)
+/dist
+
+# Configuration d'outils IA locale à la machine — pas destinée au dépôt partagé
+# (voir incident de fuite en clair dans .claude/settings.local.json en mémoire projet)
+.claude
+.agents
+.windsurf
