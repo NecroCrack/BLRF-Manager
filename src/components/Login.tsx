@@ -112,6 +112,24 @@ export default function Login() {
             {submitting ? "CONNEXION EN COURS…" : "SE CONNECTER →"}
           </button>
         </form>
+
+        {/* EDMC requirement notice */}
+        <div className="clip-corner-sm p-4 mt-4" style={{ background: "#070d1a", border: "1px solid #12223a" }}>
+          <div className="font-jbmono text-[11px] leading-relaxed mb-3" style={{ color: "#3d5878" }}>
+            <span style={{ color: "#8aabca" }}>EDMC (Elite Dangerous Market Connector)</span> avec le plugin BLRF est requis pour le bon fonctionnement de l'application : localisation, vaisseaux, colonisation et influence des factions ne se mettent à jour qu'avec lui.
+          </div>
+          <a
+            href="https://github.com/EDCD/EDMarketConnector/releases/latest"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center font-orbitron text-[11px] px-4 py-2 clip-corner-sm tracking-widest transition-all"
+            style={{ color: "#2196f3", background: "rgba(33,150,243,0.08)", border: "1px solid rgba(33,150,243,0.3)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(33,150,243,0.15)" }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(33,150,243,0.08)" }}
+          >
+            TÉLÉCHARGER EDMC ↗
+          </a>
+        </div>
       </div>
     </div>
   )
