@@ -8,13 +8,14 @@ import Forum from "./components/Forum"
 import Notes from "./components/Notes"
 import Messages from "./components/Messages"
 import Colonisation from "./components/Colonisation"
+import Factions from "./components/Factions"
 import RolesAdmin from "./components/RolesAdmin"
 import Login from "./components/Login"
 import ChangePasswordModal from "./components/ChangePasswordModal"
 import AccountSettingsModal from "./components/AccountSettingsModal"
 import { AuthProvider, useAuth } from "./context/AuthContext"
 
-type Section = "dashboard" | "map" | "members" | "builds" | "missions" | "forum" | "notes" | "messages" | "colonisation" | "roles"
+type Section = "dashboard" | "map" | "members" | "builds" | "missions" | "forum" | "notes" | "messages" | "colonisation" | "factions" | "roles"
 
 interface NavItem {
   id: Section
@@ -123,6 +124,13 @@ function IconColonisation() {
     </svg>
   )
 }
+function IconFactions() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 1L9.4 5.6L14 5.6L10.3 8.4L11.7 13L8 10.2L4.3 13L5.7 8.4L2 5.6L6.6 5.6L8 1Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+    </svg>
+  )
+}
 function IconRoles() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -154,6 +162,7 @@ const SECTION_TITLES: Record<Section, string> = {
   notes: "Notes Personnelles",
   messages: "Messagerie",
   colonisation: "Colonisation",
+  factions: "Influence des Factions",
   roles: "Rôles & Permissions",
 }
 
@@ -249,6 +258,7 @@ function AppShell() {
     { id: "notes",     label: "NOTES PRIVÉES",    icon: <IconNotes /> },
     { id: "messages",  label: "MESSAGES",          icon: <IconMessages /> },
     { id: "colonisation", label: "COLONISATION",   icon: <IconColonisation /> },
+    { id: "factions",  label: "INFLUENCE",          icon: <IconFactions /> },
     ...(hasPermission("roles.manage") ? [{ id: "roles" as const, label: "RÔLES & PERMISSIONS", icon: <IconRoles /> }] : []),
   ]
 
@@ -445,6 +455,7 @@ function AppShell() {
           {section === "notes"     && <Notes />}
           {section === "messages"  && <Messages />}
           {section === "colonisation" && <Colonisation />}
+          {section === "factions"  && <Factions />}
           {section === "roles"     && <RolesAdmin />}
         </div>
       </main>

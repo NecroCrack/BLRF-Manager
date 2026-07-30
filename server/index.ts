@@ -24,6 +24,7 @@ import { encrypt } from './crypto';
 import { startInaraSyncCron } from './cron';
 import { parseLoadout, canonicalJson, parseResources } from './edLoadout';
 import { checkSystemForResources } from './edsmMarket';
+import { parseFactions, parseEdsmFactions, edsmControllingFactionName } from './edFactions';
 
 dotenv.config();
 
@@ -952,6 +953,254 @@ app.post('/api/colonisation', requireAuth, requirePermission('colonisation.add')
     include: colonisationSiteInclude,
   });
   res.status(201).json(toPublicColonisationSite(site));
+});
+
+// ─── Influence des factions (BGS) ──────────────────────────────────────────
+// Alimenté par le plugin EDMC (FSDJump/Location, voir edmc-plugin/) en priorité, complété à la
+// demande par EDSM pour les systèmes où aucun membre n'est passé récemment. Historique
+// append-only (FactionSnapshot) : chaque rapport crée une nouvelle ligne, jamais une mise à jour
+// en place, pour pouvoir calculer une tendance et garder une trace dans le temps.
+
+function toPublicFactionSummary(latest: Prisma.FactionSnapshotGetPayload<{ include: { faction: true } }>, previous: { influence: number } | null) {
+  return {
+    factionId: latest.factionId,
+    nom: latest.faction.name,
+    allegeance: latest.faction.allegiance,
+    gouvernement: latest.faction.government,
+    influence: latest.influence,
+    etat: latest.state,
+    humeur: latest.happiness,
+    etatsActifs: latest.activeStates,
+    etatsEnRecuperation: latest.recoveringStates,
+    etatsEnAttente: latest.pendingStates,
+    controle: latest.isControlling,
+    estEscadron: latest.faction.isSquadron || latest.faction.isSquadronManual,
+    source: latest.source,
+    dateMaj: latest.recordedAt,
+    tendance: previous ? Math.round((latest.influence - previous.influence) * 1000) / 1000 : null,
+  };
+}
+
+// Regroupe les snapshots (déjà triés du plus récent au plus ancien) par système puis par
+// faction : le premier snapshot rencontré pour une paire (système, faction) est le plus récent,
+// le second sert de point de comparaison pour la tendance.
+function groupLatestSnapshots(
+  snapshots: Prisma.FactionSnapshotGetPayload<{ include: { faction: true; system: true } }>[],
+) {
+  const bySystem = new Map<string, {
+    system: { id: string; name: string; coordX: number; coordY: number; coordZ: number };
+    factions: Map<string, { latest: typeof snapshots[number]; previous: typeof snapshots[number] | null }>;
+  }>();
+  for (const snap of snapshots) {
+    let sys = bySystem.get(snap.systemId);
+    if (!sys) {
+      sys = { system: snap.system, factions: new Map() };
+      bySystem.set(snap.systemId, sys);
+    }
+    const entry = sys.factions.get(snap.factionId);
+    if (!entry) {
+      sys.factions.set(snap.factionId, { latest: snap, previous: null });
+    } else if (!entry.previous) {
+      entry.previous = snap;
+    }
+  }
+  return bySystem;
+}
+
+app.post('/api/plugin/factions', requirePluginToken, async (req, res) => {
+  const { systemName, factions, controllingFactionName } = req.body ?? {};
+  if (typeof systemName !== 'string' || !systemName.trim()) {
+    res.status(400).json({ error: 'Nom de système requis.' });
+    return;
+  }
+  const parsed = parseFactions(factions);
+  if (!parsed) {
+    res.status(400).json({ error: 'Aucune faction exploitable dans le rapport.' });
+    return;
+  }
+
+  let coords: EdsmSystem | null;
+  try {
+    coords = await lookupEdsmSystem(systemName.trim());
+  } catch {
+    res.status(429).json({ error: 'Limite de requêtes EDSM atteinte, réessayez plus tard.' });
+    return;
+  }
+  if (!coords) {
+    res.status(404).json({ error: 'Système introuvable sur EDSM.' });
+    return;
+  }
+
+  const system = await prisma.system.upsert({
+    where: { name: coords.name },
+    update: {},
+    create: { name: coords.name, coordX: coords.coordX, coordY: coords.coordY, coordZ: coords.coordZ },
+  });
+
+  await prisma.$transaction(async tx => {
+    for (const entry of parsed) {
+      const isControlling = typeof controllingFactionName === 'string' && controllingFactionName === entry.name;
+      const faction = await tx.faction.upsert({
+        where: { name: entry.name },
+        update: {
+          allegiance: entry.allegiance,
+          government: entry.government,
+          // Ne jamais rétrograder : une fois confirmée liée au Squadron par le jeu, elle le reste.
+          isSquadron: entry.isSquadronFaction ? true : undefined,
+        },
+        create: {
+          name: entry.name,
+          allegiance: entry.allegiance,
+          government: entry.government,
+          isSquadron: entry.isSquadronFaction,
+        },
+      });
+      await tx.factionSnapshot.create({
+        data: {
+          factionId: faction.id,
+          systemId: system.id,
+          influence: entry.influence,
+          state: entry.state,
+          happiness: entry.happiness,
+          activeStates: entry.activeStates as unknown as Prisma.InputJsonValue ?? undefined,
+          recoveringStates: entry.recoveringStates as unknown as Prisma.InputJsonValue ?? undefined,
+          pendingStates: entry.pendingStates as unknown as Prisma.InputJsonValue ?? undefined,
+          isControlling,
+          source: 'PLUGIN',
+          reportedById: req.pluginMember!.id,
+        },
+      });
+    }
+  });
+
+  res.status(201).json({ ok: true, systeme: system.name, factions: parsed.length });
+});
+
+app.get('/api/factions', requireAuth, async (req, res) => {
+  const snapshots = await prisma.factionSnapshot.findMany({
+    orderBy: { recordedAt: 'desc' },
+    include: { faction: true, system: true },
+  });
+  const bySystem = groupLatestSnapshots(snapshots);
+
+  const result = Array.from(bySystem.values()).map(({ system, factions }) => {
+    const list = Array.from(factions.values()).map(({ latest, previous }) => toPublicFactionSummary(latest, previous));
+    list.sort((a, b) => b.influence - a.influence);
+    return {
+      systeme: system,
+      dateMaj: list.reduce((max, f) => (f.dateMaj > max ? f.dateMaj : max), list[0]?.dateMaj ?? new Date(0)),
+      factions: list,
+    };
+  });
+  result.sort((a, b) => (a.dateMaj < b.dateMaj ? 1 : -1));
+
+  res.json(result);
+});
+
+app.get('/api/factions/system/:systemId', requireAuth, async (req, res) => {
+  const system = await prisma.system.findUnique({ where: { id: req.params.systemId as string } });
+  if (!system) {
+    res.status(404).json({ error: 'Système introuvable.' });
+    return;
+  }
+  const snapshots = await prisma.factionSnapshot.findMany({
+    where: { systemId: system.id },
+    orderBy: { recordedAt: 'desc' },
+    include: { faction: true, system: true },
+    take: 500, // borne raisonnable : au-delà, l'historique par faction ci-dessous est déjà tronqué
+  });
+  const bySystem = groupLatestSnapshots(snapshots);
+  const grouped = bySystem.get(system.id);
+  const factions = grouped
+    ? Array.from(grouped.factions.entries()).map(([factionId, { latest, previous }]) => ({
+        ...toPublicFactionSummary(latest, previous),
+        historique: snapshots
+          .filter(s => s.factionId === factionId)
+          .slice(0, 20)
+          .map(s => ({ influence: s.influence, etat: s.state, date: s.recordedAt, source: s.source }))
+          .reverse(),
+      }))
+    : [];
+  factions.sort((a, b) => b.influence - a.influence);
+
+  res.json({ systeme: system, factions });
+});
+
+// Complète les systèmes que le plugin n'a pas encore rapportés — jamais une recherche galactique,
+// juste ce système précis. Coût borné à 1 appel EDSM (quota partagé, voir consumeEdsmQuota).
+app.post('/api/factions/system/:systemId/refresh-edsm', requireAuth, async (req, res) => {
+  const system = await prisma.system.findUnique({ where: { id: req.params.systemId as string } });
+  if (!system) {
+    res.status(404).json({ error: 'Système introuvable.' });
+    return;
+  }
+  if (!consumeEdsmQuota()) {
+    res.status(429).json({ error: 'Limite de requêtes EDSM atteinte, réessayez plus tard.' });
+    return;
+  }
+
+  const edsmRes = await fetch(`https://www.edsm.net/api-system-v1/factions?systemName=${encodeURIComponent(system.name)}`);
+  if (!edsmRes.ok) {
+    res.status(502).json({ error: 'EDSM injoignable.' });
+    return;
+  }
+  const edsmData = await edsmRes.json();
+  const parsed = parseEdsmFactions(edsmData);
+  if (!parsed) {
+    res.status(404).json({ error: 'Aucune donnée de faction EDSM pour ce système.' });
+    return;
+  }
+  const controllingName = edsmControllingFactionName(edsmData);
+
+  await prisma.$transaction(async tx => {
+    for (const entry of parsed) {
+      const isControlling = controllingName === entry.name;
+      const faction = await tx.faction.upsert({
+        where: { name: entry.name },
+        update: { allegiance: entry.allegiance, government: entry.government },
+        create: { name: entry.name, allegiance: entry.allegiance, government: entry.government },
+      });
+      await tx.factionSnapshot.create({
+        data: {
+          factionId: faction.id,
+          systemId: system.id,
+          influence: entry.influence,
+          state: entry.state,
+          happiness: entry.happiness,
+          activeStates: entry.activeStates as unknown as Prisma.InputJsonValue ?? undefined,
+          recoveringStates: entry.recoveringStates as unknown as Prisma.InputJsonValue ?? undefined,
+          pendingStates: entry.pendingStates as unknown as Prisma.InputJsonValue ?? undefined,
+          isControlling,
+          source: 'EDSM',
+        },
+      });
+    }
+  });
+
+  res.status(201).json({ ok: true, factions: parsed.length });
+});
+
+// Repli manuel si l'escadron n'a pas (encore) de faction Squadron liée en jeu — SquadronFaction
+// du journal reste la source de vérité prioritaire, ceci ne fait que compléter.
+app.patch('/api/factions/:id', requireAuth, requirePermission('squadron.manage'), async (req, res) => {
+  const { isSquadronManual } = req.body ?? {};
+  if (typeof isSquadronManual !== 'boolean') {
+    res.status(400).json({ error: 'isSquadronManual (booléen) requis.' });
+    return;
+  }
+  try {
+    const faction = await prisma.faction.update({
+      where: { id: req.params.id as string },
+      data: { isSquadronManual },
+    });
+    res.json({ id: faction.id, nom: faction.name, estEscadron: faction.isSquadron || faction.isSquadronManual });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+      res.status(404).json({ error: 'Faction introuvable.' });
+      return;
+    }
+    throw err;
+  }
 });
 
 app.post('/api/edsm/lookup', requireAuth, requirePermission('map.edit'), async (req, res) => {

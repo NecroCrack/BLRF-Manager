@@ -101,6 +101,7 @@ model Member {
   messagesSent        Message[]         @relation("MessageSender")
   messagesReceived    Message[]         @relation("MessageRecipient")
   colonisationSitesAdded ColonisationSite[]
+  factionSnapshotsReported FactionSnapshot[]
 
   @@index([roleId])
 }
@@ -174,6 +175,7 @@ model System {
   missions            Mission[]
   membresLocalises    Member[]           @relation("MemberLocalisation")
   colonisationSites   ColonisationSite[]
+  factionSnapshots    FactionSnapshot[]
 }
 
 // Site de colonisation suivi par l'escadron — progression alimentée automatiquement
@@ -197,6 +199,51 @@ model ColonisationSite {
   lastUpdatedAt DateTime @default(now())
   addedById     String
   addedBy       Member   @relation(fields: [addedById], references: [id])
+}
+
+enum FactionSnapshotSource {
+  PLUGIN // rapporté en direct par un membre équipé du plugin EDMC (FSDJump/Location)
+  EDSM   // récupéré à la demande sur un système où aucun membre n'est passé récemment
+}
+
+// Faction mineure connue de l'escadron (pas seulement la sienne — toutes celles croisées dans un
+// système suivi, utile pour situer le contexte BGS local). Une ligne par nom de faction, l'historique
+// d'influence vit dans FactionSnapshot.
+model Faction {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  allegiance String?
+  government String?
+  // Vrai dès qu'un snapshot a rapporté SquadronFaction=true dans le journal (Frontier identifie
+  // lui-même la faction liée au Squadron in-game) — ou marqué à la main sinon (voir isSquadronManual).
+  isSquadron       Boolean @default(false)
+  isSquadronManual Boolean @default(false)
+  snapshots  FactionSnapshot[]
+}
+
+// Photo d'influence d'une faction dans un système à un instant donné — table d'historique,
+// jamais mise à jour en place (append-only), pour pouvoir calculer une tendance.
+model FactionSnapshot {
+  id               String   @id @default(uuid())
+  factionId        String
+  faction          Faction  @relation(fields: [factionId], references: [id], onDelete: Cascade)
+  systemId         String
+  system           System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  influence        Float
+  state            String
+  happiness        String?
+  activeStates     Json?
+  recoveringStates Json?
+  pendingStates    Json?
+  // Vrai si cette faction contrôlait le système au moment du rapport (SystemFaction du journal
+  // ou controllingFaction d'EDSM).
+  isControlling Boolean               @default(false)
+  source        FactionSnapshotSource
+  recordedAt    DateTime              @default(now())
+  reportedById  String?
+  reportedBy    Member?               @relation(fields: [reportedById], references: [id], onDelete: SetNull)
+
+  @@index([systemId, factionId, recordedAt])
 }
 
 // Entité : Un marqueur ajouté par l'escadron sur un système

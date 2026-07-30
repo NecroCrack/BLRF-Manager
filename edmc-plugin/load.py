@@ -1,10 +1,12 @@
 """
 Plugin EDMC pour le BLRF Squadron Manager.
 
-Pousse deux choses vers le backend de l'escadron, via le jeton personnel
+Pousse plusieurs choses vers le backend de l'escadron, via le jeton personnel
 (généré dans l'app : Paramètres de compte > Plugin EDMC) :
   1. Le système actuel du commandant (localisation, onglet Membres)
   2. La progression des chantiers de colonisation (onglet Colonisation)
+  3. La configuration du vaisseau actuel (onglet Vaisseaux)
+  4. L'influence des factions locales du système (onglet Influence)
 
 Reste volontairement minimal : aucune dépendance externe (urllib de la
 bibliothèque standard uniquement), jamais bloquant pour le jeu — toute erreur
@@ -30,6 +32,10 @@ CFG_TOKEN = "blrf_api_token"
 
 # Événements journal signalant un changement de système.
 LOCATION_EVENTS = {"FSDJump", "Location", "CarrierJump"}
+
+# Seuls ces deux événements portent le tableau "Factions" (influence par faction locale) —
+# vérifié le 30/07/2026 : Docked ne le contient PAS (juste un StationFaction sans influence).
+FACTION_EVENTS = {"FSDJump", "Location"}
 
 # Nom d'événement journal pour la progression d'un chantier de colonisation.
 # Format confirmé (schéma communautaire EDCD + forums Frontier, 30/07/2026) : l'événement
@@ -134,7 +140,18 @@ def journal_entry(cmdr, is_beta, system, station, entry, state):
     if event in LOCATION_EVENTS and entry.get("StarSystem"):
         _post("/api/plugin/location", {"systemName": entry["StarSystem"]})
 
-    elif event == "Loadout":
+    # Indépendant du bloc précédent (pas un elif) : FSDJump/Location doivent déclencher les DEUX
+    # pushs (localisation ET influence des factions) — ce sont deux informations distinctes
+    # portées par le même événement.
+    if event in FACTION_EVENTS and entry.get("Factions"):
+        system_faction = entry.get("SystemFaction") or {}
+        _post("/api/plugin/factions", {
+            "systemName": entry.get("StarSystem") or system,
+            "factions": entry.get("Factions"),
+            "controllingFactionName": system_faction.get("Name"),
+        })
+
+    if event == "Loadout":
         # L'événement contient déjà tout ce qu'il faut (Ship, ShipID, ShipName, ShipIdent,
         # Modules) — même forme que le format communautaire SLEF, transmis tel quel au serveur
         # qui le normalise (voir server/edLoadout.ts). Se déclenche à chaque montée à bord, achat
