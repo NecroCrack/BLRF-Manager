@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useAuth } from "../context/AuthContext"
 import NewMemberModal from "./NewMemberModal"
+import BulkAddMembersModal from "./BulkAddMembersModal"
 
 interface MemberRole {
   id: string
@@ -356,12 +357,17 @@ export default function Members() {
   const [onlineOnly, setOnlineOnly] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showNewMember, setShowNewMember] = useState(false)
+  const [showBulkAdd, setShowBulkAdd] = useState(false)
 
-  useEffect(() => {
-    fetch("/api/members", { credentials: "include" })
+  function fetchMembers() {
+    return fetch("/api/members", { credentials: "include" })
       .then(r => r.json())
       .then(setMembers)
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    fetchMembers()
   }, [])
 
   const selected = members.find(m => m.id === selectedId) || null
@@ -410,15 +416,26 @@ export default function Members() {
               {onlineCount} EN LIGNE · {members.length} TOTAL
             </span>
             {canAdminister && (
-              <button
-                onClick={() => setShowNewMember(true)}
-                className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
-                style={{ color: "#f28c1a", background: "rgba(242,140,26,0.1)", border: "1px solid rgba(242,140,26,0.3)" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "rgba(242,140,26,0.18)" }}
-                onMouseLeave={e => { e.currentTarget.style.background = "rgba(242,140,26,0.1)" }}
-              >
-                + NOUVEAU MEMBRE
-              </button>
+              <>
+                <button
+                  onClick={() => setShowBulkAdd(true)}
+                  className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
+                  style={{ color: "#2196f3", background: "rgba(33,150,243,0.1)", border: "1px solid rgba(33,150,243,0.3)" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(33,150,243,0.18)" }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(33,150,243,0.1)" }}
+                >
+                  IMPORT EN MASSE
+                </button>
+                <button
+                  onClick={() => setShowNewMember(true)}
+                  className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
+                  style={{ color: "#f28c1a", background: "rgba(242,140,26,0.1)", border: "1px solid rgba(242,140,26,0.3)" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(242,140,26,0.18)" }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(242,140,26,0.1)" }}
+                >
+                  + NOUVEAU MEMBRE
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -523,6 +540,7 @@ export default function Members() {
       </div>
 
       {showNewMember && <NewMemberModal onClose={() => setShowNewMember(false)} />}
+      {showBulkAdd && <BulkAddMembersModal onClose={() => setShowBulkAdd(false)} onCreated={fetchMembers} />}
     </div>
   )
 }

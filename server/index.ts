@@ -426,6 +426,71 @@ app.post('/api/members', requireAuth, requirePermission('members.administer'), a
   }
 });
 
+// Import en masse (ex. recrutement initial d'un escadron entier) : {pseudo, roleName} par ligne,
+// matricule généré automatiquement (BLRF-<prochain numéro libre>). Best-effort ligne par ligne —
+// une ligne invalide (rôle introuvable, pseudo déjà pris) n'empêche pas les autres de passer ;
+// chaque ligne rapporte son propre résultat pour pouvoir corriger et ne renvoyer que les échecs.
+app.post('/api/members/bulk', requireAuth, requirePermission('members.administer'), async (req, res) => {
+  const { members } = req.body ?? {};
+  if (!Array.isArray(members) || members.length === 0) {
+    res.status(400).json({ error: 'Liste de membres requise.' });
+    return;
+  }
+  if (members.length > 200) {
+    res.status(400).json({ error: 'Maximum 200 membres par import.' });
+    return;
+  }
+
+  const existing = await prisma.member.findMany({ select: { matricule: true } });
+  let nextNum = existing.reduce((max, m) => {
+    const match = /^BLRF-(\d+)$/.exec(m.matricule);
+    return match ? Math.max(max, parseInt(match[1]!, 10)) : max;
+  }, 0) + 1;
+
+  const roles = await prisma.role.findMany();
+  const roleByName = new Map(roles.map(r => [r.name.toLowerCase(), r]));
+  const canManageRoles = await memberHasPermission(prisma, req.user!.roleId, 'roles.manage');
+
+  const results: Array<{ line: number; pseudo: string; matricule: string | null; generatedPassword: string | null; error: string | null }> = [];
+
+  for (let i = 0; i < members.length; i++) {
+    const entry = members[i];
+    const pseudo = typeof entry?.pseudo === 'string' ? entry.pseudo.trim() : '';
+    const roleName = typeof entry?.roleName === 'string' ? entry.roleName.trim() : '';
+
+    if (!pseudo || !roleName) {
+      results.push({ line: i + 1, pseudo: pseudo || '(vide)', matricule: null, generatedPassword: null, error: 'Pseudo et rôle requis.' });
+      continue;
+    }
+    const role = roleByName.get(roleName.toLowerCase());
+    if (!role) {
+      results.push({ line: i + 1, pseudo, matricule: null, generatedPassword: null, error: `Rôle "${roleName}" introuvable.` });
+      continue;
+    }
+    if (role.protege && !canManageRoles) {
+      results.push({ line: i + 1, pseudo, matricule: null, generatedPassword: null, error: "Attribuer le rôle protégé exige le droit 'gérer les rôles'." });
+      continue;
+    }
+
+    const matricule = `BLRF-${nextNum}`;
+    const generatedPassword = generateStrongPassword();
+    const passwordHash = await bcrypt.hash(generatedPassword, BCRYPT_COST);
+    try {
+      await prisma.member.create({ data: { matricule, pseudo, roleId: role.id, passwordHash } });
+      results.push({ line: i + 1, pseudo, matricule, generatedPassword, error: null });
+      nextNum++;
+    } catch (err) {
+      if (isUniqueConstraintError(err)) {
+        results.push({ line: i + 1, pseudo, matricule: null, generatedPassword: null, error: 'Pseudo déjà utilisé.' });
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  res.status(200).json({ results });
+});
+
 app.patch('/api/members/:id', requireAuth, requirePermission('members.administer'), async (req, res) => {
   const { roleId } = req.body ?? {};
 
@@ -438,6 +503,17 @@ app.patch('/api/members/:id', requireAuth, requirePermission('members.administer
     if (!role) {
       res.status(400).json({ error: 'Rôle invalide.' });
       return;
+    }
+    // Faille corrigée le 31/07/2026 : 'members.administer' seul permettait de s'auto-attribuer
+    // (ou d'attribuer à quiconque) le rôle protégé, contournant complètement la séparation des
+    // droits — un membre avec seulement "gérer les membres" pouvait s'octroyer tous les droits
+    // d'un coup. Attribuer le rôle protégé exige désormais explicitement 'roles.manage' en plus.
+    if (role.protege) {
+      const canManageRoles = await memberHasPermission(prisma, req.user!.roleId, 'roles.manage');
+      if (!canManageRoles) {
+        res.status(403).json({ error: "Seul un membre avec le droit 'gérer les rôles' peut attribuer le rôle protégé." });
+        return;
+      }
     }
   }
 
