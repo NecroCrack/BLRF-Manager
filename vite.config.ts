@@ -95,10 +95,10 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
     return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   }
   function replaceHtmlCommentSlot(html: string, slotName: string, content: string): string {
-    return html.replace(``, content)
+    return html.replace(`<!-- ${slotName} -->`, content)
   }
 
-  const title = config.title ?? "Figma Make App"
+  const title = config.title ?? "BLRF Squadron Manager"
   const description = config.description ?? ''
   const favicon = config.icons?.icon ?? ''
   const socialImage = config.openGraph?.image ?? ''
