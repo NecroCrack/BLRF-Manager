@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react"
+import { useAuth } from "../context/AuthContext"
 
 interface SyncStatus {
   inaraConfigured: boolean
@@ -13,6 +14,11 @@ interface PluginTokenStatus {
 }
 
 export default function AccountSettingsModal({ onClose }: { onClose: () => void }) {
+  const { user } = useAuth()
+  const [pseudo, setPseudo] = useState(user?.pseudo ?? "")
+  const [pseudoError, setPseudoError] = useState<string | null>(null)
+  const [savingPseudo, setSavingPseudo] = useState(false)
+
   const [status, setStatus] = useState<SyncStatus | null>(null)
   const [apiKey, setApiKey] = useState("")
   const [commanderName, setCommanderName] = useState("")
@@ -55,6 +61,34 @@ export default function AccountSettingsModal({ onClose }: { onClose: () => void 
     if (!newToken) return
     await navigator.clipboard.writeText(newToken)
     setTokenCopied(true)
+  }
+
+  async function handleSavePseudo(e: FormEvent) {
+    e.preventDefault()
+    setPseudoError(null)
+    if (!pseudo.trim()) {
+      setPseudoError("Le pseudo ne peut pas être vide.")
+      return
+    }
+    setSavingPseudo(true)
+    try {
+      const res = await fetch("/api/members/me/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ pseudo }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setPseudoError(data?.error || "Échec de l'enregistrement.")
+        setSavingPseudo(false)
+        return
+      }
+      // Recharge pour que le pseudo affiché partout (barre latérale, roster...) reste à jour.
+      window.location.reload()
+    } catch {
+      setSavingPseudo(false)
+    }
   }
 
   async function handleSave(e: FormEvent) {
@@ -105,6 +139,34 @@ export default function AccountSettingsModal({ onClose }: { onClose: () => void 
         <div className="font-orbitron text-[12px] tracking-widest mb-1" style={{ color: "#3d5878" }}>
           PARAMÈTRES DE COMPTE
         </div>
+
+        <form onSubmit={handleSavePseudo} className="mb-5 pb-5" style={{ borderBottom: "1px solid #12223a" }}>
+          <label className="font-orbitron text-[11px] tracking-widest block mb-1.5" style={{ color: "#3d5878" }}>
+            PSEUDO / NOM DE CMDR
+          </label>
+          <div className="flex gap-2">
+            <input
+              value={pseudo}
+              onChange={e => setPseudo(e.target.value)}
+              className="flex-1 font-jbmono text-[14px] bg-transparent outline-none px-3 py-2 clip-corner-sm"
+              style={{ color: "#8aabca", border: "1px solid #12223a" }}
+            />
+            <button
+              type="submit"
+              disabled={savingPseudo || pseudo.trim() === user?.pseudo}
+              className="font-orbitron text-[11px] px-4 clip-corner-sm tracking-widest transition-all disabled:opacity-40"
+              style={{ color: "#f28c1a", background: "rgba(242,140,26,0.12)", border: "1px solid rgba(242,140,26,0.35)" }}
+            >
+              {savingPseudo ? "…" : "ENREGISTRER"}
+            </button>
+          </div>
+          {pseudoError && (
+            <div className="font-jbmono text-[12px] mt-2 px-3 py-2 clip-corner-sm" style={{ color: "#e53030", background: "rgba(229,48,48,0.1)", border: "1px solid rgba(229,48,48,0.25)" }}>
+              {pseudoError}
+            </div>
+          )}
+        </form>
+
         <div className="font-jbmono text-[11px] mb-5" style={{ color: "#3d5878" }}>
           Synchronisation Inara
         </div>

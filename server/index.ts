@@ -633,20 +633,35 @@ app.post('/api/members/me/heartbeat', requireAuth, async (req, res) => {
 });
 
 app.patch('/api/members/me/profile', requireAuth, async (req, res) => {
-  const { localisation, vaisseau, vaisseauModele, specialite } = req.body ?? {};
+  const { pseudo, localisation, vaisseau, vaisseauModele, specialite } = req.body ?? {};
   const clean = (v: unknown) => (typeof v === 'string' ? v.trim().slice(0, 200) || null : undefined);
 
-  const member = await prisma.member.update({
-    where: { id: req.user!.sub },
-    data: {
-      ...(clean(localisation) !== undefined && { localisation: clean(localisation) }),
-      ...(clean(vaisseau) !== undefined && { vaisseau: clean(vaisseau) }),
-      ...(clean(vaisseauModele) !== undefined && { vaisseauModele: clean(vaisseauModele) }),
-      ...(clean(specialite) !== undefined && { specialite: clean(specialite) }),
-    },
-    include: rosterMemberInclude,
-  });
-  res.json(toRosterMember(member));
+  const cleanPseudo = typeof pseudo === 'string' ? pseudo.trim() : undefined;
+  if (cleanPseudo !== undefined && !cleanPseudo) {
+    res.status(400).json({ error: 'Le pseudo ne peut pas être vide.' });
+    return;
+  }
+
+  try {
+    const member = await prisma.member.update({
+      where: { id: req.user!.sub },
+      data: {
+        ...(cleanPseudo !== undefined && { pseudo: cleanPseudo }),
+        ...(clean(localisation) !== undefined && { localisation: clean(localisation) }),
+        ...(clean(vaisseau) !== undefined && { vaisseau: clean(vaisseau) }),
+        ...(clean(vaisseauModele) !== undefined && { vaisseauModele: clean(vaisseauModele) }),
+        ...(clean(specialite) !== undefined && { specialite: clean(specialite) }),
+      },
+      include: rosterMemberInclude,
+    });
+    res.json(toRosterMember(member));
+  } catch (err) {
+    if (isUniqueConstraintError(err)) {
+      res.status(409).json({ error: 'Ce pseudo est déjà utilisé par un autre membre.' });
+      return;
+    }
+    throw err;
+  }
 });
 
 // Paramètres de compte : clé API Inara personnelle. Jamais retournée en clair après écriture —
