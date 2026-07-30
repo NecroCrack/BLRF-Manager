@@ -28,15 +28,23 @@ export interface ForumPostApi {
   comments: ForumCommentApi[]
 }
 
-const RANK_CONFIG: Record<string, { color: string; short: string }> = {
-  COMMANDANT: { color: "#f28c1a", short: "CMD" },
-  OFFICIER:   { color: "#2196f3", short: "OFF" },
-  PILOTE:     { color: "#8aabca", short: "PLT" },
-  RECRUE:     { color: "#3d5878", short: "REC" },
+// Style par appellation (titre affiché devant le pseudo) — voir Members.tsx pour
+// le même mapping, dupliqué ici volontairement (petit composant, pas de module partagé).
+const APPELLATION_COLOR: Record<string, string> = {
+  "Ingénieur":       "#06b6d4",
+  "Amiral":          "#f28c1a",
+  "Commandant":      "#e53030",
+  "Capitaine":       "#a78bfa",
+  "Lieutenant":      "#2196f3",
+  "Second":          "#0fc882",
+  "Commando":        "#0fc882",
+  "Quartier maitre": "#8aabca",
+  "Matelot":         "#8aabca",
+  "Moussaillon":     "#3d5878",
 }
-const DEFAULT_RANK = { color: "#8aabca", short: "???" }
-function rankCfg(role: Role) {
-  return RANK_CONFIG[role] ?? DEFAULT_RANK
+function rankCfg(appellation: Role) {
+  const color = APPELLATION_COLOR[appellation] ?? "#8aabca"
+  return { color, short: appellation.slice(0, 3).toUpperCase() }
 }
 
 const CAT_COLOR: Record<ForumCategorieKind, string> = {
@@ -61,7 +69,7 @@ function Avatar({ pseudo, role }: { pseudo: string; role: Role }) {
   const cfg = rankCfg(role)
   return (
     <div
-      className="w-8 h-8 flex-shrink-0 clip-corner-sm flex items-center justify-center font-orbitron text-[9px] font-bold"
+      className="w-8 h-8 flex-shrink-0 clip-corner-sm flex items-center justify-center font-orbitron text-[11px] font-bold"
       style={{ background: `${cfg.color}12`, color: cfg.color, border: `1px solid ${cfg.color}30` }}
     >
       {pseudo.slice(0, 2).toUpperCase()}
@@ -92,40 +100,40 @@ function PostCard({ post, onOpen }: { post: ForumPostApi; onOpen: () => void }) 
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 {post.epingle && (
-                  <span className="font-orbitron text-[8px] px-1.5 py-0.5 clip-corner-sm" style={{ color: "#e53030", background: "rgba(229,48,48,0.1)", border: "1px solid rgba(229,48,48,0.25)" }}>
+                  <span className="font-orbitron text-[10px] px-1.5 py-0.5 clip-corner-sm" style={{ color: "#e53030", background: "rgba(229,48,48,0.1)", border: "1px solid rgba(229,48,48,0.25)" }}>
                     📌 ÉPINGLÉ
                   </span>
                 )}
                 <span
-                  className="font-orbitron text-[8px] px-1.5 py-0.5 clip-corner-sm"
+                  className="font-orbitron text-[10px] px-1.5 py-0.5 clip-corner-sm"
                   style={{ color: catColor, background: `${catColor}10`, border: `1px solid ${catColor}30` }}
                 >
                   {CAT_LABEL[post.categorie].toUpperCase()}
                 </span>
               </div>
-              <div className="font-orbitron text-[11px] font-semibold" style={{ color: "#8aabca" }}>
+              <div className="font-orbitron text-[13px] font-semibold" style={{ color: "#8aabca" }}>
                 {post.titre}
               </div>
             </div>
           </div>
 
-          <div className="font-jbmono text-[10px] line-clamp-2 mb-2" style={{ color: "#3d5878" }}>
+          <div className="font-jbmono text-[12px] line-clamp-2 mb-2" style={{ color: "#3d5878" }}>
             {post.contenu.slice(0, 120)}…
           </div>
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
-              <span className="font-jbmono text-[9px]" style={{ color: rankCfgValue.color }}>CMDR {post.auteur}</span>
+              <span className="font-jbmono text-[11px]" style={{ color: rankCfgValue.color }}>CMDR {post.auteur}</span>
               <span
-                className="font-orbitron text-[8px] px-1 clip-corner-sm"
+                className="font-orbitron text-[10px] px-1 clip-corner-sm"
                 style={{ color: rankCfgValue.color, background: `${rankCfgValue.color}10` }}
               >
                 {rankCfgValue.short}
               </span>
             </div>
-            <span className="font-jbmono text-[9px]" style={{ color: "#1c3050" }}>·</span>
-            <span className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>{post.dateCreation.slice(0, 10)}</span>
-            <span className="font-jbmono text-[9px] ml-auto" style={{ color: "#3d5878" }}>
+            <span className="font-jbmono text-[11px]" style={{ color: "#1c3050" }}>·</span>
+            <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>{post.dateCreation.slice(0, 10)}</span>
+            <span className="font-jbmono text-[11px] ml-auto" style={{ color: "#3d5878" }}>
               💬 {post.nbCommentaires} · 👁 {post.vues}
             </span>
           </div>
@@ -169,7 +177,7 @@ function PostDetail({ post, onClose, onCommentAdded }: { post: ForumPostApi; onC
       {/* Back button */}
       <button
         onClick={onClose}
-        className="flex items-center gap-2 font-orbitron text-[9px] tracking-wider transition-colors"
+        className="flex items-center gap-2 font-orbitron text-[11px] tracking-wider transition-colors"
         style={{ color: "#3d5878" }}
         onMouseEnter={e => (e.currentTarget.style.color = "#f28c1a")}
         onMouseLeave={e => (e.currentTarget.style.color = "#3d5878")}
@@ -186,12 +194,12 @@ function PostDetail({ post, onClose, onCommentAdded }: { post: ForumPostApi; onC
 
         <div className="flex items-start gap-2 mb-1 flex-wrap">
           {post.epingle && (
-            <span className="font-orbitron text-[8px] px-1.5 py-0.5 clip-corner-sm" style={{ color: "#e53030", background: "rgba(229,48,48,0.1)", border: "1px solid rgba(229,48,48,0.25)" }}>
+            <span className="font-orbitron text-[10px] px-1.5 py-0.5 clip-corner-sm" style={{ color: "#e53030", background: "rgba(229,48,48,0.1)", border: "1px solid rgba(229,48,48,0.25)" }}>
               📌 ÉPINGLÉ
             </span>
           )}
           <span
-            className="font-orbitron text-[8px] px-1.5 py-0.5 clip-corner-sm"
+            className="font-orbitron text-[10px] px-1.5 py-0.5 clip-corner-sm"
             style={{ color: catColor, background: `${catColor}10`, border: `1px solid ${catColor}30` }}
           >
             {CAT_LABEL[post.categorie].toUpperCase()}
@@ -204,16 +212,16 @@ function PostDetail({ post, onClose, onCommentAdded }: { post: ForumPostApi; onC
         <div className="flex items-center gap-3 mb-4 pb-3" style={{ borderBottom: "1px solid #0c1828" }}>
           <Avatar pseudo={post.auteur} role={post.auteurRole} />
           <div>
-            <div className="font-jbmono text-[10px]" style={{ color: rankCfg(post.auteurRole).color }}>
+            <div className="font-jbmono text-[12px]" style={{ color: rankCfg(post.auteurRole).color }}>
               CMDR {post.auteur}
             </div>
-            <div className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>
+            <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>
               {post.auteurRole} · {new Date(post.dateCreation).toLocaleString("fr-FR")}
             </div>
           </div>
         </div>
 
-        <div className="font-jbmono text-[11px] leading-relaxed whitespace-pre-line" style={{ color: "#8aabca" }}>
+        <div className="font-jbmono text-[13px] leading-relaxed whitespace-pre-line" style={{ color: "#8aabca" }}>
           {post.contenu}
         </div>
       </div>
@@ -222,7 +230,7 @@ function PostDetail({ post, onClose, onCommentAdded }: { post: ForumPostApi; onC
       <div>
         <div className="flex items-center gap-2 mb-3">
           <div className="w-px h-4" style={{ background: "#2196f3" }} />
-          <span className="font-orbitron text-[10px] tracking-widest" style={{ color: "#8aabca" }}>
+          <span className="font-orbitron text-[12px] tracking-widest" style={{ color: "#8aabca" }}>
             RÉPONSES ({post.comments.length})
           </span>
         </div>
@@ -238,22 +246,22 @@ function PostDetail({ post, onClose, onCommentAdded }: { post: ForumPostApi; onC
                 <div className="flex items-center gap-2 mb-2">
                   <Avatar pseudo={comment.auteur} role={comment.auteurRole} />
                   <div>
-                    <div className="font-jbmono text-[10px]" style={{ color: cfg.color }}>
+                    <div className="font-jbmono text-[12px]" style={{ color: cfg.color }}>
                       CMDR {comment.auteur}
                     </div>
-                    <div className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>
+                    <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>
                       {comment.auteurRole} · {new Date(comment.date).toLocaleString("fr-FR")}
                     </div>
                   </div>
                 </div>
-                <div className="font-jbmono text-[10px] leading-relaxed pl-10" style={{ color: "#8aabca" }}>
+                <div className="font-jbmono text-[12px] leading-relaxed pl-10" style={{ color: "#8aabca" }}>
                   {comment.contenu}
                 </div>
               </div>
             )
           })}
           {post.comments.length === 0 && (
-            <div className="font-jbmono text-[10px] py-2" style={{ color: "#3d5878" }}>Aucune réponse pour l'instant.</div>
+            <div className="font-jbmono text-[12px] py-2" style={{ color: "#3d5878" }}>Aucune réponse pour l'instant.</div>
           )}
         </div>
       </div>
@@ -263,11 +271,11 @@ function PostDetail({ post, onClose, onCommentAdded }: { post: ForumPostApi; onC
         className="clip-corner p-4"
         style={{ background: "#070d1a", border: "1px solid #12223a" }}
       >
-        <div className="font-jbmono text-[9px] mb-2" style={{ color: "#3d5878" }}>VOTRE RÉPONSE (CMDR {user?.pseudo})</div>
+        <div className="font-jbmono text-[11px] mb-2" style={{ color: "#3d5878" }}>VOTRE RÉPONSE (CMDR {user?.pseudo})</div>
         <textarea
           value={reply}
           onChange={e => setReply(e.target.value)}
-          className="w-full font-jbmono text-[11px] bg-transparent resize-none outline-none"
+          className="w-full font-jbmono text-[13px] bg-transparent resize-none outline-none"
           rows={3}
           style={{ color: "#8aabca", borderBottom: "1px solid #12223a" }}
           placeholder="Votre message…"
@@ -276,7 +284,7 @@ function PostDetail({ post, onClose, onCommentAdded }: { post: ForumPostApi; onC
           <button
             onClick={sendReply}
             disabled={submitting || !reply.trim()}
-            className="font-orbitron text-[9px] px-4 py-2 clip-corner-sm tracking-wider transition-all disabled:opacity-50"
+            className="font-orbitron text-[11px] px-4 py-2 clip-corner-sm tracking-wider transition-all disabled:opacity-50"
             style={{ color: "#f28c1a", background: "rgba(242,140,26,0.12)", border: "1px solid rgba(242,140,26,0.35)" }}
             onMouseEnter={e => { e.currentTarget.style.background = "rgba(242,140,26,0.2)" }}
             onMouseLeave={e => { e.currentTarget.style.background = "rgba(242,140,26,0.12)" }}
@@ -313,7 +321,7 @@ export default function Forum() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center">
-        <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>CHARGEMENT DU FORUM…</span>
+        <span className="font-jbmono text-[13px]" style={{ color: "#3d5878" }}>CHARGEMENT DU FORUM…</span>
       </div>
     )
   }
@@ -327,13 +335,13 @@ export default function Forum() {
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
               <div className="w-px h-4" style={{ background: "#f28c1a" }} />
-              <span className="font-orbitron text-[11px] tracking-widest" style={{ color: "#8aabca" }}>
+              <span className="font-orbitron text-[13px] tracking-widest" style={{ color: "#8aabca" }}>
                 FORUM DE L'ESCADRON
               </span>
             </div>
             <button
               onClick={() => setShowNewPost(true)}
-              className="font-orbitron text-[9px] px-3 py-2 clip-corner-sm tracking-wider transition-all"
+              className="font-orbitron text-[11px] px-3 py-2 clip-corner-sm tracking-wider transition-all"
               style={{ color: "#f28c1a", background: "rgba(242,140,26,0.1)", border: "1px solid rgba(242,140,26,0.3)" }}
               onMouseEnter={e => { e.currentTarget.style.background = "rgba(242,140,26,0.18)" }}
               onMouseLeave={e => { e.currentTarget.style.background = "rgba(242,140,26,0.1)" }}
@@ -351,7 +359,7 @@ export default function Forum() {
                 <button
                   key={cat}
                   onClick={() => setCatFilter(cat)}
-                  className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
+                  className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
                   style={{
                     color: active ? color : "#3d5878",
                     background: active ? `${color}10` : "#070d1a",
@@ -370,7 +378,7 @@ export default function Forum() {
               <PostCard key={post.id} post={post} onOpen={() => setOpenId(post.id)} />
             ))}
             {filtered.length === 0 && (
-              <div className="clip-corner p-8 text-center font-jbmono text-[11px]" style={{ background: "#070d1a", border: "1px solid #12223a", color: "#3d5878" }}>
+              <div className="clip-corner p-8 text-center font-jbmono text-[13px]" style={{ background: "#070d1a", border: "1px solid #12223a", color: "#3d5878" }}>
                 AUCUN POST DANS CETTE CATÉGORIE
               </div>
             )}

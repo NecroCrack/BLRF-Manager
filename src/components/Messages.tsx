@@ -86,7 +86,7 @@ export default function Messages() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center">
-        <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>CHARGEMENT DES MESSAGES…</span>
+        <span className="font-jbmono text-[13px]" style={{ color: "#3d5878" }}>CHARGEMENT DES MESSAGES…</span>
       </div>
     )
   }
@@ -104,11 +104,11 @@ export default function Messages() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-px h-4" style={{ background: "#f28c1a" }} />
-            <span className="font-orbitron text-[11px] tracking-widest" style={{ color: "#8aabca" }}>MESSAGES</span>
+            <span className="font-orbitron text-[13px] tracking-widest" style={{ color: "#8aabca" }}>MESSAGES</span>
           </div>
           <button
             onClick={() => setShowNewConvo(v => !v)}
-            className="font-orbitron text-[9px] px-2 py-1 clip-corner-sm transition-all"
+            className="font-orbitron text-[11px] px-2 py-1 clip-corner-sm transition-all"
             style={{ color: "#f28c1a", background: "rgba(242,140,26,0.1)", border: "1px solid rgba(242,140,26,0.3)" }}
           >
             + NOUVEAU
@@ -121,7 +121,7 @@ export default function Messages() {
               <button
                 key={m.id}
                 onClick={() => openConversation(m.id)}
-                className="w-full text-left px-2 py-1.5 font-jbmono text-[10px] clip-corner-sm transition-all"
+                className="w-full text-left px-2 py-1.5 font-jbmono text-[12px] clip-corner-sm transition-all"
                 style={{ color: "#8aabca" }}
                 onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
@@ -130,7 +130,7 @@ export default function Messages() {
               </button>
             ))}
             {membersWithoutConvo.length === 0 && (
-              <div className="font-jbmono text-[9px] px-2 py-1" style={{ color: "#1c3050" }}>Aucun autre membre.</div>
+              <div className="font-jbmono text-[11px] px-2 py-1" style={{ color: "#1c3050" }}>Aucun autre membre.</div>
             )}
           </div>
         )}
@@ -149,21 +149,21 @@ export default function Messages() {
                 }}
               >
                 <div className="flex items-center justify-between mb-0.5">
-                  <span className="font-orbitron text-[10px] font-semibold truncate" style={{ color: active ? "#f28c1a" : "#8aabca" }}>
+                  <span className="font-orbitron text-[12px] font-semibold truncate" style={{ color: active ? "#f28c1a" : "#8aabca" }}>
                     CMDR {c.pseudo}
                   </span>
                   {c.unread > 0 && (
-                    <span className="font-jbmono text-[8px] px-1.5 py-0.5 clip-corner-sm flex-shrink-0" style={{ color: "#0fc882", background: "rgba(15,200,130,0.12)" }}>
+                    <span className="font-jbmono text-[10px] px-1.5 py-0.5 clip-corner-sm flex-shrink-0" style={{ color: "#0fc882", background: "rgba(15,200,130,0.12)" }}>
                       {c.unread}
                     </span>
                   )}
                 </div>
-                <div className="font-jbmono text-[9px] truncate" style={{ color: "#3d5878" }}>{c.lastMessage}</div>
+                <div className="font-jbmono text-[11px] truncate" style={{ color: "#3d5878" }}>{c.lastMessage}</div>
               </button>
             )
           })}
           {conversations.length === 0 && !showNewConvo && (
-            <div className="font-jbmono text-[9px] text-center py-4" style={{ color: "#1c3050" }}>Aucune conversation.</div>
+            <div className="font-jbmono text-[11px] text-center py-4" style={{ color: "#1c3050" }}>Aucune conversation.</div>
           )}
         </div>
       </div>
@@ -187,8 +187,8 @@ export default function Messages() {
                         border: `1px solid ${mine ? "rgba(242,140,26,0.3)" : "#12223a"}`,
                       }}
                     >
-                      <div className="font-jbmono text-[10px] leading-relaxed" style={{ color: "#8aabca" }}>{m.contenu}</div>
-                      <div className="font-jbmono text-[8px] mt-1" style={{ color: "#3d5878" }}>
+                      <div className="font-jbmono text-[12px] leading-relaxed" style={{ color: "#8aabca" }}>{m.contenu}</div>
+                      <div className="font-jbmono text-[10px] mt-1" style={{ color: "#3d5878" }}>
                         {new Date(m.date).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                       </div>
                     </div>
@@ -196,7 +196,7 @@ export default function Messages() {
                 )
               })}
               {thread.length === 0 && (
-                <div className="font-jbmono text-[10px] text-center py-8" style={{ color: "#1c3050" }}>Aucun message pour l'instant.</div>
+                <div className="font-jbmono text-[12px] text-center py-8" style={{ color: "#1c3050" }}>Aucun message pour l'instant.</div>
               )}
             </div>
             <div className="flex gap-2">
@@ -205,13 +205,13 @@ export default function Messages() {
                 onChange={e => setDraft(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") sendMessage() }}
                 placeholder="Votre message…"
-                className="flex-1 font-jbmono text-[11px] bg-transparent outline-none px-3 py-2.5 clip-corner-sm"
+                className="flex-1 font-jbmono text-[13px] bg-transparent outline-none px-3 py-2.5 clip-corner-sm"
                 style={{ color: "#8aabca", border: "1px solid #12223a" }}
               />
               <button
                 onClick={sendMessage}
                 disabled={sending || !draft.trim()}
-                className="font-orbitron text-[9px] px-4 clip-corner-sm transition-all disabled:opacity-50"
+                className="font-orbitron text-[11px] px-4 clip-corner-sm transition-all disabled:opacity-50"
                 style={{ color: "#f28c1a", border: "1px solid rgba(242,140,26,0.35)", background: "rgba(242,140,26,0.1)" }}
               >
                 ENVOYER →
@@ -219,7 +219,7 @@ export default function Messages() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center font-jbmono text-[11px]" style={{ color: "#3d5878" }}>
+          <div className="flex-1 flex items-center justify-center font-jbmono text-[13px]" style={{ color: "#3d5878" }}>
             Sélectionnez une conversation, ou démarrez-en une nouvelle.
           </div>
         )}

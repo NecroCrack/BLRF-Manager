@@ -10,13 +10,15 @@ interface PermissionApi {
 interface RoleApi {
   id: string
   name: string
+  appellation: string
+  description: string | null
   rang: number
   protege: boolean
   permissions: PermissionKey[]
   membresCount: number
 }
 
-const EMPTY_FORM = { name: "", rang: 0, permissions: new Set<PermissionKey>() }
+const EMPTY_FORM = { name: "", appellation: "", description: "", rang: 0, permissions: new Set<PermissionKey>() }
 
 export default function RolesAdmin() {
   const [roles, setRoles] = useState<RoleApi[]>([])
@@ -44,13 +46,13 @@ export default function RolesAdmin() {
 
   function selectRole(role: RoleApi) {
     setSelectedId(role.id)
-    setForm({ name: role.name, rang: role.rang, permissions: new Set(role.permissions) })
+    setForm({ name: role.name, appellation: role.appellation, description: role.description ?? "", rang: role.rang, permissions: new Set(role.permissions) })
     setError(null)
   }
 
   function startNew() {
     setSelectedId("new")
-    setForm({ name: "", rang: 0, permissions: new Set() })
+    setForm({ name: "", appellation: "", description: "", rang: 0, permissions: new Set() })
     setError(null)
   }
 
@@ -67,7 +69,13 @@ export default function RolesAdmin() {
     setSaving(true)
     setError(null)
     try {
-      const body = { name: form.name, rang: form.rang, permissions: Array.from(form.permissions) }
+      const body = {
+        name: form.name,
+        appellation: form.appellation,
+        description: form.description || null,
+        rang: form.rang,
+        permissions: Array.from(form.permissions),
+      }
       const res = await fetch(
         selectedId === "new" ? "/api/roles" : `/api/roles/${selectedId}`,
         {
@@ -105,7 +113,7 @@ export default function RolesAdmin() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center">
-        <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>CHARGEMENT DES RÔLES…</span>
+        <span className="font-jbmono text-[13px]" style={{ color: "#3d5878" }}>CHARGEMENT DES RÔLES…</span>
       </div>
     )
   }
@@ -118,13 +126,13 @@ export default function RolesAdmin() {
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <div className="w-px h-4" style={{ background: "#f28c1a" }} />
-          <span className="font-orbitron text-[11px] tracking-widest" style={{ color: "#8aabca" }}>
+          <span className="font-orbitron text-[13px] tracking-widest" style={{ color: "#8aabca" }}>
             RÔLES & PERMISSIONS
           </span>
         </div>
         <button
           onClick={startNew}
-          className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
+          className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
           style={{ color: "#f28c1a", background: "rgba(242,140,26,0.1)", border: "1px solid rgba(242,140,26,0.3)" }}
         >
           + NOUVEAU RÔLE
@@ -145,15 +153,15 @@ export default function RolesAdmin() {
               }}
             >
               <div className="flex items-center justify-between">
-                <span className="font-orbitron text-[10px] font-semibold" style={{ color: "#8aabca" }}>
+                <span className="font-orbitron text-[12px] font-semibold" style={{ color: "#8aabca" }}>
                   {role.name}
                 </span>
                 {role.protege && (
-                  <span className="font-jbmono text-[8px]" style={{ color: "#f28c1a" }}>🔒</span>
+                  <span className="font-jbmono text-[10px]" style={{ color: "#f28c1a" }}>🔒</span>
                 )}
               </div>
-              <div className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>
-                rang {role.rang} · {role.membresCount} membre{role.membresCount > 1 ? "s" : ""}
+              <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>
+                {role.appellation} · rang {role.rang} · {role.membresCount} membre{role.membresCount > 1 ? "s" : ""}
               </div>
             </button>
           ))}
@@ -162,46 +170,68 @@ export default function RolesAdmin() {
         {/* Editor */}
         <div className="flex-1 min-w-0">
           {!editing ? (
-            <div className="clip-corner p-8 text-center font-jbmono text-[11px]" style={{ background: "#070d1a", border: "1px solid #12223a", color: "#3d5878" }}>
+            <div className="clip-corner p-8 text-center font-jbmono text-[13px]" style={{ background: "#070d1a", border: "1px solid #12223a", color: "#3d5878" }}>
               Sélectionnez un rôle à gauche, ou créez-en un nouveau.
             </div>
           ) : (
             <div className="clip-corner p-5" style={{ background: "#070d1a", border: "1px solid rgba(242,140,26,0.25)" }}>
               {selectedRole?.protege && (
-                <div className="font-jbmono text-[10px] mb-4 px-3 py-2 clip-corner-sm" style={{ color: "#f28c1a", background: "rgba(242,140,26,0.08)", border: "1px solid rgba(242,140,26,0.25)" }}>
+                <div className="font-jbmono text-[12px] mb-4 px-3 py-2 clip-corner-sm" style={{ color: "#f28c1a", background: "rgba(242,140,26,0.08)", border: "1px solid rgba(242,140,26,0.25)" }}>
                   🔒 Rôle protégé — garantit toujours au moins un super-admin, non modifiable/supprimable.
                 </div>
               )}
 
-              <div className="flex gap-3 mb-4">
+              <div className="flex gap-3 mb-3">
                 <div className="flex-1">
-                  <div className="font-jbmono text-[9px] mb-1" style={{ color: "#3d5878" }}>NOM DU RÔLE</div>
+                  <div className="font-jbmono text-[11px] mb-1" style={{ color: "#3d5878" }}>GRADE</div>
                   <input
                     value={form.name}
                     disabled={!!selectedRole?.protege}
                     onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                    className="w-full font-jbmono text-[11px] bg-transparent outline-none px-3 py-2 clip-corner-sm disabled:opacity-50"
+                    className="w-full font-jbmono text-[13px] bg-transparent outline-none px-3 py-2 clip-corner-sm disabled:opacity-50"
+                    style={{ color: "#8aabca", border: "1px solid #12223a" }}
+                  />
+                </div>
+                <div className="flex-1">
+                  <div className="font-jbmono text-[11px] mb-1" style={{ color: "#3d5878" }}>APPELLATION (devant le pseudo)</div>
+                  <input
+                    value={form.appellation}
+                    disabled={!!selectedRole?.protege}
+                    onChange={e => setForm(f => ({ ...f, appellation: e.target.value }))}
+                    className="w-full font-jbmono text-[13px] bg-transparent outline-none px-3 py-2 clip-corner-sm disabled:opacity-50"
                     style={{ color: "#8aabca", border: "1px solid #12223a" }}
                   />
                 </div>
                 <div className="w-24">
-                  <div className="font-jbmono text-[9px] mb-1" style={{ color: "#3d5878" }}>RANG</div>
+                  <div className="font-jbmono text-[11px] mb-1" style={{ color: "#3d5878" }}>RANG</div>
                   <input
                     type="number"
                     value={form.rang}
                     disabled={!!selectedRole?.protege}
                     onChange={e => setForm(f => ({ ...f, rang: Number(e.target.value) }))}
-                    className="w-full font-jbmono text-[11px] bg-transparent outline-none px-3 py-2 clip-corner-sm disabled:opacity-50"
+                    className="w-full font-jbmono text-[13px] bg-transparent outline-none px-3 py-2 clip-corner-sm disabled:opacity-50"
                     style={{ color: "#8aabca", border: "1px solid #12223a" }}
                   />
                 </div>
               </div>
 
-              <div className="font-jbmono text-[9px] mb-2" style={{ color: "#3d5878" }}>DROITS ACCORDÉS</div>
+              <div className="mb-4">
+                <div className="font-jbmono text-[11px] mb-1" style={{ color: "#3d5878" }}>FONCTION / PRÉREQUIS</div>
+                <textarea
+                  value={form.description}
+                  disabled={!!selectedRole?.protege}
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  rows={2}
+                  className="w-full font-jbmono text-[12px] bg-transparent outline-none px-3 py-2 clip-corner-sm resize-none disabled:opacity-50"
+                  style={{ color: "#8aabca", border: "1px solid #12223a" }}
+                />
+              </div>
+
+              <div className="font-jbmono text-[11px] mb-2" style={{ color: "#3d5878" }}>DROITS ACCORDÉS</div>
               <div className="space-y-3 mb-5 max-h-80 overflow-y-auto scrollable pr-1">
                 {categories.map(cat => (
                   <div key={cat}>
-                    <div className="font-orbitron text-[8px] tracking-widest mb-1.5" style={{ color: "#1c3050" }}>
+                    <div className="font-orbitron text-[10px] tracking-widest mb-1.5" style={{ color: "#1c3050" }}>
                       {cat.toUpperCase()}
                     </div>
                     <div className="space-y-1">
@@ -217,7 +247,7 @@ export default function RolesAdmin() {
                             disabled={!!selectedRole?.protege}
                             onChange={() => togglePermission(p.key)}
                           />
-                          <span className="font-jbmono text-[10px]" style={{ color: "#8aabca" }}>{p.label}</span>
+                          <span className="font-jbmono text-[12px]" style={{ color: "#8aabca" }}>{p.label}</span>
                         </label>
                       ))}
                     </div>
@@ -226,7 +256,7 @@ export default function RolesAdmin() {
               </div>
 
               {error && (
-                <div className="font-jbmono text-[10px] mb-4 px-3 py-2 clip-corner-sm" style={{ color: "#e53030", background: "rgba(229,48,48,0.1)", border: "1px solid rgba(229,48,48,0.25)" }}>
+                <div className="font-jbmono text-[12px] mb-4 px-3 py-2 clip-corner-sm" style={{ color: "#e53030", background: "rgba(229,48,48,0.1)", border: "1px solid rgba(229,48,48,0.25)" }}>
                   {error}
                 </div>
               )}
@@ -234,7 +264,7 @@ export default function RolesAdmin() {
               <div className="flex gap-2">
                 <button
                   onClick={() => { setSelectedId(null); setForm(EMPTY_FORM) }}
-                  className="flex-1 font-orbitron text-[9px] py-2 clip-corner-sm transition-all"
+                  className="flex-1 font-orbitron text-[11px] py-2 clip-corner-sm transition-all"
                   style={{ border: "1px solid #12223a", color: "#3d5878", background: "transparent" }}
                 >
                   ANNULER
@@ -242,7 +272,7 @@ export default function RolesAdmin() {
                 {selectedRole && !selectedRole.protege && (
                   <button
                     onClick={() => remove(selectedRole)}
-                    className="flex-1 font-orbitron text-[9px] py-2 clip-corner-sm transition-all"
+                    className="flex-1 font-orbitron text-[11px] py-2 clip-corner-sm transition-all"
                     style={{ color: "#e53030", border: "1px solid rgba(229,48,48,0.3)", background: "rgba(229,48,48,0.08)" }}
                   >
                     SUPPRIMER
@@ -252,7 +282,7 @@ export default function RolesAdmin() {
                   <button
                     onClick={save}
                     disabled={saving || !form.name.trim()}
-                    className="flex-1 font-orbitron text-[9px] py-2 clip-corner-sm transition-all disabled:opacity-50"
+                    className="flex-1 font-orbitron text-[11px] py-2 clip-corner-sm transition-all disabled:opacity-50"
                     style={{ color: "#f28c1a", background: "rgba(242,140,26,0.12)", border: "1px solid rgba(242,140,26,0.35)" }}
                   >
                     {saving ? "…" : "ENREGISTRER"}

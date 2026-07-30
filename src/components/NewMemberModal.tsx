@@ -61,15 +61,15 @@ export default function NewMemberModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(4,7,13,0.85)" }}>
-      <div className="w-full max-w-sm clip-corner p-6" style={{ background: "#070d1a", border: "1px solid #12223a" }}>
+      <div className="w-full max-w-md clip-corner p-6" style={{ background: "#070d1a", border: "1px solid #12223a" }}>
         {!created ? (
           <form onSubmit={handleSubmit}>
-            <div className="font-orbitron text-[10px] tracking-widest mb-5" style={{ color: "#3d5878" }}>
+            <div className="font-orbitron text-[12px] tracking-widest mb-5" style={{ color: "#3d5878" }}>
               NOUVEAU MEMBRE
             </div>
 
             <div className="mb-4">
-              <label className="font-orbitron text-[9px] tracking-widest block mb-1.5" style={{ color: "#3d5878" }}>
+              <label className="font-orbitron text-[11px] tracking-widest block mb-1.5" style={{ color: "#3d5878" }}>
                 MATRICULE
               </label>
               <input
@@ -78,13 +78,13 @@ export default function NewMemberModal({ onClose }: { onClose: () => void }) {
                 onChange={e => setMatricule(e.target.value)}
                 placeholder="BLRF-002"
                 required
-                className="w-full font-jbmono text-[12px] bg-transparent outline-none px-3 py-2.5 clip-corner-sm"
+                className="w-full font-jbmono text-[14px] bg-transparent outline-none px-3 py-2.5 clip-corner-sm"
                 style={{ color: "#8aabca", border: "1px solid #12223a" }}
               />
             </div>
 
             <div className="mb-4">
-              <label className="font-orbitron text-[9px] tracking-widest block mb-1.5" style={{ color: "#3d5878" }}>
+              <label className="font-orbitron text-[11px] tracking-widest block mb-1.5" style={{ color: "#3d5878" }}>
                 PSEUDO
               </label>
               <input
@@ -92,19 +92,19 @@ export default function NewMemberModal({ onClose }: { onClose: () => void }) {
                 value={pseudo}
                 onChange={e => setPseudo(e.target.value)}
                 required
-                className="w-full font-jbmono text-[12px] bg-transparent outline-none px-3 py-2.5 clip-corner-sm"
+                className="w-full font-jbmono text-[14px] bg-transparent outline-none px-3 py-2.5 clip-corner-sm"
                 style={{ color: "#8aabca", border: "1px solid #12223a" }}
               />
             </div>
 
             <div className="mb-5">
-              <label className="font-orbitron text-[9px] tracking-widest block mb-1.5" style={{ color: "#3d5878" }}>
+              <label className="font-orbitron text-[11px] tracking-widest block mb-1.5" style={{ color: "#3d5878" }}>
                 RÔLE
               </label>
               <select
                 value={roleId}
                 onChange={e => setRoleId(e.target.value)}
-                className="w-full font-jbmono text-[12px] px-3 py-2.5 clip-corner-sm"
+                className="w-full font-jbmono text-[14px] px-3 py-2.5 clip-corner-sm"
                 style={{ color: "#8aabca", background: "#070d1a", border: "1px solid #12223a" }}
               >
                 {roles.map(r => (
@@ -115,7 +115,7 @@ export default function NewMemberModal({ onClose }: { onClose: () => void }) {
 
             {error && (
               <div
-                className="font-jbmono text-[10px] mb-4 px-3 py-2 clip-corner-sm"
+                className="font-jbmono text-[12px] mb-4 px-3 py-2 clip-corner-sm"
                 style={{ color: "#e53030", background: "rgba(229,48,48,0.1)", border: "1px solid rgba(229,48,48,0.25)" }}
               >
                 {error}
@@ -126,7 +126,7 @@ export default function NewMemberModal({ onClose }: { onClose: () => void }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 font-orbitron text-[10px] px-4 py-2.5 clip-corner-sm tracking-widest transition-all"
+                className="flex-1 font-orbitron text-[12px] px-4 py-2.5 clip-corner-sm tracking-widest transition-all"
                 style={{ color: "#3d5878", background: "transparent", border: "1px solid #12223a" }}
               >
                 ANNULER
@@ -134,7 +134,7 @@ export default function NewMemberModal({ onClose }: { onClose: () => void }) {
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex-1 font-orbitron text-[10px] px-4 py-2.5 clip-corner-sm tracking-widest transition-all disabled:opacity-50"
+                className="flex-1 font-orbitron text-[12px] px-4 py-2.5 clip-corner-sm tracking-widest transition-all disabled:opacity-50"
                 style={{ color: "#f28c1a", background: "rgba(242,140,26,0.12)", border: "1px solid rgba(242,140,26,0.35)" }}
               >
                 {submitting ? "CRÉATION…" : "CRÉER →"}
@@ -143,11 +143,11 @@ export default function NewMemberModal({ onClose }: { onClose: () => void }) {
           </form>
         ) : (
           <div>
-            <div className="font-orbitron text-[10px] tracking-widest mb-3" style={{ color: "#0fc882" }}>
+            <div className="font-orbitron text-[12px] tracking-widest mb-3" style={{ color: "#0fc882" }}>
               MEMBRE CRÉÉ : {created.matricule} — {created.pseudo}
             </div>
             <div
-              className="font-jbmono text-[10px] mb-4 px-3 py-2 clip-corner-sm"
+              className="font-jbmono text-[12px] mb-4 px-3 py-2 clip-corner-sm"
               style={{ color: "#e53030", background: "rgba(229,48,48,0.1)", border: "1px solid rgba(229,48,48,0.25)" }}
             >
               Ce mot de passe ne sera plus jamais affiché. Transmettez-le au pilote maintenant, hors application.
@@ -162,7 +162,7 @@ export default function NewMemberModal({ onClose }: { onClose: () => void }) {
               <button
                 type="button"
                 onClick={copyPassword}
-                className="flex-1 font-orbitron text-[10px] px-4 py-2.5 clip-corner-sm tracking-widest transition-all"
+                className="flex-1 font-orbitron text-[12px] px-4 py-2.5 clip-corner-sm tracking-widest transition-all"
                 style={{ color: "#8aabca", background: "transparent", border: "1px solid #12223a" }}
               >
                 {copied ? "COPIÉ ✓" : "COPIER"}
@@ -170,7 +170,7 @@ export default function NewMemberModal({ onClose }: { onClose: () => void }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 font-orbitron text-[10px] px-4 py-2.5 clip-corner-sm tracking-widest transition-all"
+                className="flex-1 font-orbitron text-[12px] px-4 py-2.5 clip-corner-sm tracking-widest transition-all"
                 style={{ color: "#f28c1a", background: "rgba(242,140,26,0.12)", border: "1px solid rgba(242,140,26,0.35)" }}
               >
                 FERMER

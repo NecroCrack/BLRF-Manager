@@ -5,6 +5,7 @@ import NewMemberModal from "./NewMemberModal"
 interface MemberRole {
   id: string
   name: string
+  appellation: string
   rang: number
 }
 
@@ -27,18 +28,26 @@ interface MemberApi {
   dateJoin: string
 }
 
-// Style par nom de rôle : couvre les 4 rôles historiques, avec un style neutre
-// de repli pour tout rôle personnalisé créé ensuite par le commandant.
-const RANK_CONFIG: Record<string, { color: string; short: string; bg: string; label: string }> = {
-  COMMANDANT: { color: "#f28c1a", short: "CMD", bg: "rgba(242,140,26,0.12)", label: "Commandant" },
-  OFFICIER:   { color: "#2196f3", short: "OFF", bg: "rgba(33,150,243,0.12)", label: "Officier" },
-  PILOTE:     { color: "#8aabca", short: "PLT", bg: "rgba(138,171,202,0.08)", label: "Pilote" },
-  RECRUE:     { color: "#3d5878", short: "REC", bg: "rgba(61,88,120,0.12)", label: "Recrue" },
+// Style par appellation (titre affiché devant le pseudo, partagé par plusieurs
+// grades) — un style neutre de repli couvre toute appellation personnalisée
+// ajoutée ensuite par un membre habilité à gérer les rôles.
+const APPELLATION_COLOR: Record<string, string> = {
+  "Ingénieur":       "#06b6d4",
+  "Amiral":          "#f28c1a",
+  "Commandant":      "#e53030",
+  "Capitaine":       "#a78bfa",
+  "Lieutenant":      "#2196f3",
+  "Second":          "#0fc882",
+  "Commando":        "#0fc882",
+  "Quartier maitre": "#8aabca",
+  "Matelot":         "#8aabca",
+  "Moussaillon":     "#3d5878",
 }
-const DEFAULT_RANK_CONFIG = { color: "#8aabca", short: "???", bg: "rgba(138,171,202,0.08)", label: "" }
+const DEFAULT_RANK_COLOR = "#8aabca"
 
 function rankConfigFor(role: MemberRole) {
-  return RANK_CONFIG[role.name] ?? { ...DEFAULT_RANK_CONFIG, label: role.name }
+  const color = APPELLATION_COLOR[role.appellation] ?? DEFAULT_RANK_COLOR
+  return { color, short: role.appellation.slice(0, 3).toUpperCase(), bg: `${color}1f`, label: role.appellation }
 }
 
 function MemberRow({ member, selected, onSelect }: { member: MemberApi; selected: boolean; onSelect: () => void }) {
@@ -55,7 +64,7 @@ function MemberRow({ member, selected, onSelect }: { member: MemberApi; selected
         <div className="flex items-center gap-3">
           <div className="relative">
             <div
-              className="w-8 h-8 clip-corner-sm flex items-center justify-center font-orbitron text-[9px] font-bold"
+              className="w-8 h-8 clip-corner-sm flex items-center justify-center font-orbitron text-[11px] font-bold"
               style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.color}30` }}
             >
               {member.pseudo.slice(0, 2).toUpperCase()}
@@ -70,40 +79,41 @@ function MemberRow({ member, selected, onSelect }: { member: MemberApi; selected
             />
           </div>
           <div>
-            <div className="font-orbitron text-[11px] font-semibold" style={{ color: selected ? "#f28c1a" : "#8aabca" }}>
+            <div className="font-orbitron text-[13px] font-semibold" style={{ color: selected ? "#f28c1a" : "#8aabca" }}>
               CMDR {member.pseudo}
             </div>
-            <div className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>{member.matricule}</div>
+            <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>{member.matricule}</div>
           </div>
         </div>
       </td>
       <td className="px-4 py-3">
         <span
-          className="font-orbitron text-[9px] px-2 py-1 clip-corner-sm"
+          className="font-orbitron text-[11px] px-2 py-1 clip-corner-sm"
           style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.color}30` }}
+          title={member.role.name}
         >
-          {member.role.name}
+          {member.role.appellation}
         </span>
       </td>
       <td className="px-4 py-3">
-        <div className="font-jbmono text-[10px]" style={{ color: "#8aabca" }}>{member.vaisseauModele || "—"}</div>
-        {member.vaisseau && <div className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>«{member.vaisseau}»</div>}
+        <div className="font-jbmono text-[12px]" style={{ color: "#8aabca" }}>{member.vaisseauModele || "—"}</div>
+        {member.vaisseau && <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>«{member.vaisseau}»</div>}
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1.5">
           <div className="w-1 h-1 rounded-full" style={{ background: member.online ? "#0fc882" : "#3d5878" }} />
-          <span className="font-jbmono text-[10px]" style={{ color: "#8aabca" }}>{member.localisation || "—"}</span>
+          <span className="font-jbmono text-[12px]" style={{ color: "#8aabca" }}>{member.localisation || "—"}</span>
           {member.localisationAuto && (
-            <span className="font-orbitron text-[7px] px-1 clip-corner-sm" style={{ color: "#0fc882", background: "rgba(15,200,130,0.1)" }}>AUTO</span>
+            <span className="font-orbitron text-[9px] px-1 clip-corner-sm" style={{ color: "#0fc882", background: "rgba(15,200,130,0.1)" }}>AUTO</span>
           )}
         </div>
       </td>
       <td className="px-4 py-3 hidden md:table-cell">
-        <span className="font-jbmono text-[10px]" style={{ color: "#3d5878" }}>{member.specialite || "—"}</span>
+        <span className="font-jbmono text-[12px]" style={{ color: "#3d5878" }}>{member.specialite || "—"}</span>
       </td>
       <td className="px-4 py-3 hidden lg:table-cell">
         <span
-          className="font-orbitron text-[9px] px-1.5 py-0.5 clip-corner-sm"
+          className="font-orbitron text-[11px] px-1.5 py-0.5 clip-corner-sm"
           style={{ color: member.online ? "#0fc882" : "#3d5878", background: member.online ? "rgba(15,200,130,0.1)" : "rgba(61,88,120,0.1)" }}
         >
           {member.online ? "EN LIGNE" : "HORS LIGNE"}
@@ -178,7 +188,7 @@ function MemberDetail({ member, isSelf, canAdminister, onClose, onUpdated }: { m
 
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 font-orbitron text-[9px] transition-colors"
+        className="absolute top-4 right-4 font-orbitron text-[11px] transition-colors"
         style={{ color: "#3d5878" }}
         onMouseEnter={e => (e.currentTarget.style.color = "#f28c1a")}
         onMouseLeave={e => (e.currentTarget.style.color = "#3d5878")}
@@ -198,26 +208,29 @@ function MemberDetail({ member, isSelf, canAdminister, onClose, onUpdated }: { m
           <div className="font-orbitron text-base font-bold mb-1" style={{ color: "#8aabca" }}>
             CMDR {member.pseudo}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span
-              className="font-orbitron text-[9px] px-2 py-0.5 clip-corner-sm"
+              className="font-orbitron text-[11px] px-2 py-0.5 clip-corner-sm"
               style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.color}30` }}
             >
-              {member.role.name}
+              {member.role.appellation}
             </span>
-            <span className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>{member.matricule}</span>
+            {member.role.name !== member.role.appellation && (
+              <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>({member.role.name})</span>
+            )}
+            <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>{member.matricule}</span>
           </div>
         </div>
       </div>
 
       {canAdminister && roleOptions.length > 0 && (
         <div className="mb-4">
-          <div className="font-jbmono text-[9px] mb-1" style={{ color: "#3d5878" }}>ASSIGNER UN RÔLE</div>
+          <div className="font-jbmono text-[11px] mb-1" style={{ color: "#3d5878" }}>ASSIGNER UN RÔLE</div>
           <select
             value={member.role.id}
             disabled={changingRole}
             onChange={e => changeRole(e.target.value)}
-            className="w-full font-jbmono text-[10px] px-2 py-1.5 clip-corner-sm disabled:opacity-50"
+            className="w-full font-jbmono text-[12px] px-2 py-1.5 clip-corner-sm disabled:opacity-50"
             style={{ color: "#8aabca", background: "#070d1a", border: "1px solid #12223a" }}
           >
             {roleOptions.map(r => (
@@ -230,7 +243,7 @@ function MemberDetail({ member, isSelf, canAdminister, onClose, onUpdated }: { m
       {editing ? (
         <div className="space-y-2 mb-4">
           {member.localisationAuto && (
-            <div className="font-jbmono text-[9px] px-2 py-1.5 clip-corner-sm" style={{ color: "#0fc882", background: "rgba(15,200,130,0.08)" }}>
+            <div className="font-jbmono text-[11px] px-2 py-1.5 clip-corner-sm" style={{ color: "#0fc882", background: "rgba(15,200,130,0.08)" }}>
               Localisation gérée automatiquement par le plugin EDMC.
             </div>
           )}
@@ -241,11 +254,11 @@ function MemberDetail({ member, isSelf, canAdminister, onClose, onUpdated }: { m
             { label: "SPÉCIALITÉ", value: specialite, set: setSpecialite },
           ].map(f => (
             <div key={f.label}>
-              <div className="font-jbmono text-[9px] mb-0.5" style={{ color: "#3d5878" }}>{f.label}</div>
+              <div className="font-jbmono text-[11px] mb-0.5" style={{ color: "#3d5878" }}>{f.label}</div>
               <input
                 value={f.value}
                 onChange={e => f.set(e.target.value)}
-                className="w-full font-jbmono text-[10px] bg-transparent outline-none px-2 py-1.5 clip-corner-sm"
+                className="w-full font-jbmono text-[12px] bg-transparent outline-none px-2 py-1.5 clip-corner-sm"
                 style={{ color: "#8aabca", border: "1px solid #12223a" }}
               />
             </div>
@@ -253,7 +266,7 @@ function MemberDetail({ member, isSelf, canAdminister, onClose, onUpdated }: { m
           <div className="flex gap-2 pt-1">
             <button
               onClick={() => setEditing(false)}
-              className="flex-1 font-orbitron text-[9px] py-1.5 clip-corner-sm transition-all"
+              className="flex-1 font-orbitron text-[11px] py-1.5 clip-corner-sm transition-all"
               style={{ border: "1px solid #12223a", color: "#3d5878", background: "transparent" }}
             >
               ANNULER
@@ -261,7 +274,7 @@ function MemberDetail({ member, isSelf, canAdminister, onClose, onUpdated }: { m
             <button
               onClick={saveProfile}
               disabled={saving}
-              className="flex-1 font-orbitron text-[9px] py-1.5 clip-corner-sm transition-all disabled:opacity-50"
+              className="flex-1 font-orbitron text-[11px] py-1.5 clip-corner-sm transition-all disabled:opacity-50"
               style={{ color: "#f28c1a", background: "rgba(242,140,26,0.12)", border: "1px solid rgba(242,140,26,0.35)" }}
             >
               {saving ? "…" : "ENREGISTRER"}
@@ -281,8 +294,8 @@ function MemberDetail({ member, isSelf, canAdminister, onClose, onUpdated }: { m
               { label: "STATUT", value: member.online ? "EN LIGNE" : "HORS LIGNE" },
             ].map(({ label, value }) => (
               <div key={label}>
-                <div className="font-jbmono text-[9px] mb-0.5" style={{ color: "#3d5878" }}>{label}</div>
-                <div className="font-jbmono text-[10px]" style={{ color: "#8aabca" }}>{value}</div>
+                <div className="font-jbmono text-[11px] mb-0.5" style={{ color: "#3d5878" }}>{label}</div>
+                <div className="font-jbmono text-[12px]" style={{ color: "#8aabca" }}>{value}</div>
               </div>
             ))}
           </div>
@@ -290,7 +303,7 @@ function MemberDetail({ member, isSelf, canAdminister, onClose, onUpdated }: { m
           {isSelf && (
             <button
               onClick={() => setEditing(true)}
-              className="w-full mb-4 font-orbitron text-[9px] py-1.5 clip-corner-sm transition-all"
+              className="w-full mb-4 font-orbitron text-[11px] py-1.5 clip-corner-sm transition-all"
               style={{ border: "1px solid #12223a", color: "#8aabca", background: "transparent" }}
             >
               MODIFIER MON PROFIL
@@ -300,7 +313,7 @@ function MemberDetail({ member, isSelf, canAdminister, onClose, onUpdated }: { m
           {/* Stats bars — réservées à soi-même ou aux membres avec la permission stats.view */}
           {canSeeStats ? (
             <div className="space-y-2">
-              <div className="font-jbmono text-[9px] mb-2" style={{ color: "#3d5878" }}>STATISTIQUES DE CARRIÈRE</div>
+              <div className="font-jbmono text-[11px] mb-2" style={{ color: "#3d5878" }}>STATISTIQUES DE CARRIÈRE</div>
               {[
                 { label: "COMBAT",      value: member.combats, color: "#e53030" },
                 { label: "EXPLORATION", value: member.explorations, color: "#2196f3" },
@@ -308,8 +321,8 @@ function MemberDetail({ member, isSelf, canAdminister, onClose, onUpdated }: { m
               ].map(stat => (
                 <div key={stat.label}>
                   <div className="flex justify-between mb-1">
-                    <span className="font-orbitron text-[9px]" style={{ color: "#3d5878" }}>{stat.label}</span>
-                    <span className="font-jbmono text-[9px]" style={{ color: stat.color }}>
+                    <span className="font-orbitron text-[11px]" style={{ color: "#3d5878" }}>{stat.label}</span>
+                    <span className="font-jbmono text-[11px]" style={{ color: stat.color }}>
                       {stat.value.toLocaleString()}
                     </span>
                   </div>
@@ -323,7 +336,7 @@ function MemberDetail({ member, isSelf, canAdminister, onClose, onUpdated }: { m
               ))}
             </div>
           ) : (
-            <div className="font-jbmono text-[9px] text-center py-3" style={{ color: "#1c3050" }}>
+            <div className="font-jbmono text-[11px] text-center py-3" style={{ color: "#1c3050" }}>
               🔒 Statistiques de carrière réservées
             </div>
           )}
@@ -358,7 +371,7 @@ export default function Members() {
   const roleFilters = useMemo(() => {
     const seen = new Map<string, MemberRole>()
     for (const m of members) seen.set(m.role.name, m.role)
-    return ["Tous", ...Array.from(seen.values()).sort((a, b) => b.rang - a.rang).map(r => r.name)]
+    return Array.from(seen.values()).sort((a, b) => b.rang - a.rang)
   }, [members])
 
   const filtered = members.filter(m =>
@@ -375,7 +388,7 @@ export default function Members() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center">
-        <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>CHARGEMENT DU ROSTER…</span>
+        <span className="font-jbmono text-[13px]" style={{ color: "#3d5878" }}>CHARGEMENT DU ROSTER…</span>
       </div>
     )
   }
@@ -388,18 +401,18 @@ export default function Members() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-px h-4" style={{ background: "#f28c1a" }} />
-            <span className="font-orbitron text-[11px] tracking-widest" style={{ color: "#8aabca" }}>
+            <span className="font-orbitron text-[13px] tracking-widest" style={{ color: "#8aabca" }}>
               ROSTER DE L'ESCADRON
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="font-jbmono text-[10px]" style={{ color: "#3d5878" }}>
+            <span className="font-jbmono text-[12px]" style={{ color: "#3d5878" }}>
               {onlineCount} EN LIGNE · {members.length} TOTAL
             </span>
             {canAdminister && (
               <button
                 onClick={() => setShowNewMember(true)}
-                className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
+                className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
                 style={{ color: "#f28c1a", background: "rgba(242,140,26,0.1)", border: "1px solid rgba(242,140,26,0.3)" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(242,140,26,0.18)" }}
                 onMouseLeave={e => { e.currentTarget.style.background = "rgba(242,140,26,0.1)" }}
@@ -412,27 +425,38 @@ export default function Members() {
 
         {/* Filters */}
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setFilter("Tous")}
+            className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
+            style={{
+              color: filter === "Tous" ? "#f28c1a" : "#3d5878",
+              background: filter === "Tous" ? "rgba(242,140,26,0.12)" : "#070d1a",
+              border: `1px solid ${filter === "Tous" ? "#f28c1a50" : "#12223a"}`,
+            }}
+          >
+            TOUS
+          </button>
           {roleFilters.map(role => {
-            const active = filter === role
-            const cfg = role !== "Tous" ? (RANK_CONFIG[role] ?? DEFAULT_RANK_CONFIG) : null
+            const active = filter === role.name
+            const cfg = rankConfigFor(role)
             return (
               <button
-                key={role}
-                onClick={() => setFilter(role)}
-                className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
+                key={role.id}
+                onClick={() => setFilter(role.name)}
+                className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
                 style={{
-                  color: active ? (cfg?.color || "#f28c1a") : "#3d5878",
-                  background: active ? (cfg?.bg || "rgba(242,140,26,0.12)") : "#070d1a",
-                  border: `1px solid ${active ? (cfg?.color || "#f28c1a") + "50" : "#12223a"}`,
+                  color: active ? cfg.color : "#3d5878",
+                  background: active ? cfg.bg : "#070d1a",
+                  border: `1px solid ${active ? cfg.color + "50" : "#12223a"}`,
                 }}
               >
-                {role === "Tous" ? "TOUS" : role}
+                {role.name}
               </button>
             )
           })}
           <button
             onClick={() => setOnlineOnly(!onlineOnly)}
-            className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all ml-2"
+            className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all ml-2"
             style={{
               color: onlineOnly ? "#0fc882" : "#3d5878",
               background: onlineOnly ? "rgba(15,200,130,0.1)" : "#070d1a",
@@ -457,7 +481,7 @@ export default function Members() {
                   {["COMMANDANT", "RANG", "VAISSEAU", "LOCALISATION", "SPÉCIALITÉ", "STATUT"].map(h => (
                     <th
                       key={h}
-                      className="px-4 py-3 text-left font-orbitron text-[9px] tracking-widest"
+                      className="px-4 py-3 text-left font-orbitron text-[11px] tracking-widest"
                       style={{ color: "#3d5878", background: "#060b17" }}
                     >
                       {h}
@@ -477,7 +501,7 @@ export default function Members() {
               </tbody>
             </table>
             {filtered.length === 0 && (
-              <div className="p-8 text-center font-jbmono text-[11px]" style={{ color: "#3d5878" }}>
+              <div className="p-8 text-center font-jbmono text-[13px]" style={{ color: "#3d5878" }}>
                 AUCUN MEMBRE NE CORRESPOND AUX FILTRES
               </div>
             )}

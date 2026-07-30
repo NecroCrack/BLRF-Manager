@@ -88,7 +88,9 @@ startInaraSyncCron(prisma);
 const app = express();
 
 app.use(cors({ origin: FRONTEND_ORIGIN, credentials: true }));
-app.use(express.json());
+// Limite relevée au-delà du défaut (100kb) pour permettre le logo de l'escadron
+// (data URI base64, plafonné à ~1MB côté route).
+app.use(express.json({ limit: '2mb' }));
 app.use(cookieParser());
 
 const memberWithRoleInclude = {
@@ -102,7 +104,13 @@ function toPublicMember(member: MemberWithRole) {
     id: member.id,
     matricule: member.matricule,
     pseudo: member.pseudo,
-    role: { id: member.role.id, name: member.role.name, rang: member.role.rang, protege: member.role.protege },
+    role: {
+      id: member.role.id,
+      name: member.role.name,
+      appellation: member.role.appellation,
+      rang: member.role.rang,
+      protege: member.role.protege,
+    },
     permissions: member.role.permissions.filter(p => p.granted).map(p => p.permissionKey),
   };
 }
@@ -145,7 +153,7 @@ function toRosterMember(m: RosterMember) {
     id: m.id,
     matricule: m.matricule,
     pseudo: m.pseudo,
-    role: { id: m.role.id, name: m.role.name, rang: m.role.rang },
+    role: { id: m.role.id, name: m.role.name, appellation: m.role.appellation, rang: m.role.rang },
     actif: m.actif,
     online: isMemberOnline(m.lastSeenAt),
     localisation: m.localisationAuto ? m.localisationSystem?.name ?? null : m.localisation,
@@ -178,6 +186,7 @@ function toPublicMission(m: MissionWithRelations) {
     type: m.type,
     systeme: m.systeme,
     systemId: m.systemId,
+    responsableId: m.responsableId,
     responsable: m.responsable?.pseudo ?? null,
     createdAt: m.createdAt,
     dateCompletion: m.dateCompletion,
@@ -222,8 +231,8 @@ function toPublicBuild(b: ShipBuildWithRelations) {
 
 type ForumPostWithRelations = Prisma.ForumPostGetPayload<{
   include: {
-    member: { select: { pseudo: true; role: { select: { name: true } } } };
-    comments: { include: { member: { select: { pseudo: true; role: { select: { name: true } } } } } };
+    member: { select: { pseudo: true; role: { select: { name: true; appellation: true } } } };
+    comments: { include: { member: { select: { pseudo: true; role: { select: { name: true; appellation: true } } } } } };
     _count: { select: { comments: true } };
   };
 }>;
@@ -238,14 +247,14 @@ function toPublicPost(p: ForumPostWithRelations) {
     vues: p.vues,
     dateCreation: p.createdAt,
     auteur: p.member.pseudo,
-    auteurRole: p.member.role.name,
+    auteurRole: p.member.role.appellation || p.member.role.name,
     nbCommentaires: p._count.comments,
     comments: p.comments.map(c => ({
       id: c.id,
       contenu: c.content,
       date: c.createdAt,
       auteur: c.member.pseudo,
-      auteurRole: c.member.role.name,
+      auteurRole: c.member.role.appellation || c.member.role.name,
     })),
   };
 }
@@ -287,6 +296,7 @@ function toPublicSquadron(sq: Prisma.SquadronGetPayload<{}>, commandant: string 
     tag: sq.tag,
     description: sq.description,
     fondation: sq.fondation,
+    logo: sq.logo,
     commandant,
     totalMembres,
   };
@@ -462,6 +472,8 @@ app.get('/api/roles', requireAuth, async (req, res) => {
     roles.map(r => ({
       id: r.id,
       name: r.name,
+      appellation: r.appellation,
+      description: r.description,
       rang: r.rang,
       protege: r.protege,
       permissions: r.permissions.filter(p => p.granted).map(p => p.permissionKey),
@@ -471,7 +483,7 @@ app.get('/api/roles', requireAuth, async (req, res) => {
 });
 
 app.post('/api/roles', requireAuth, requirePermission('roles.manage'), async (req, res) => {
-  const { name, rang, permissions } = req.body ?? {};
+  const { name, appellation, description, rang, permissions } = req.body ?? {};
 
   if (typeof name !== 'string' || !name.trim()) {
     res.status(400).json({ error: 'Nom de rôle requis.' });
@@ -484,6 +496,8 @@ app.post('/api/roles', requireAuth, requirePermission('roles.manage'), async (re
     const role = await prisma.role.create({
       data: {
         name: name.trim(),
+        appellation: typeof appellation === 'string' ? appellation.trim() : '',
+        description: typeof description === 'string' && description.trim() ? description.trim() : null,
         rang: rangValue,
         permissions: { create: permissionKeys.map(key => ({ permissionKey: key, granted: true })) },
       },
@@ -492,6 +506,8 @@ app.post('/api/roles', requireAuth, requirePermission('roles.manage'), async (re
     res.status(201).json({
       id: role.id,
       name: role.name,
+      appellation: role.appellation,
+      description: role.description,
       rang: role.rang,
       protege: role.protege,
       permissions: role.permissions.filter(p => p.granted).map(p => p.permissionKey),
@@ -516,7 +532,7 @@ app.patch('/api/roles/:id', requireAuth, requirePermission('roles.manage'), asyn
     return;
   }
 
-  const { name, rang, permissions } = req.body ?? {};
+  const { name, appellation, description, rang, permissions } = req.body ?? {};
   const permissionKeys = Array.isArray(permissions) ? permissions.filter(isPermissionKey) : undefined;
 
   try {
@@ -525,6 +541,8 @@ app.patch('/api/roles/:id', requireAuth, requirePermission('roles.manage'), asyn
         where: { id: existing.id },
         data: {
           ...(typeof name === 'string' && name.trim() && { name: name.trim() }),
+          ...(typeof appellation === 'string' && { appellation: appellation.trim() }),
+          ...(description !== undefined && { description: typeof description === 'string' && description.trim() ? description.trim() : null }),
           ...(Number.isInteger(rang) && { rang: rang as number }),
         },
       });
@@ -544,6 +562,8 @@ app.patch('/api/roles/:id', requireAuth, requirePermission('roles.manage'), asyn
     res.json({
       id: role.id,
       name: role.name,
+      appellation: role.appellation,
+      description: role.description,
       rang: role.rang,
       protege: role.protege,
       permissions: role.permissions.filter(p => p.granted).map(p => p.permissionKey),
@@ -960,9 +980,19 @@ app.get('/api/squadron', async (req, res) => {
   res.json(toPublicSquadron(squadron, commandant?.pseudo ?? null, totalMembres));
 });
 
+// Data URI base64 uniquement (pas de stockage objet) — plafonné pour éviter de gonfler la base.
+const MAX_LOGO_DATA_URI_LENGTH = 1_500_000; // ~1MB en base64
+
 app.patch('/api/squadron', requireAuth, requirePermission('squadron.manage'), async (req, res) => {
-  const { nom, tag, description, fondation } = req.body ?? {};
+  const { nom, tag, description, fondation, logo } = req.body ?? {};
   const clean = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
+
+  if (logo !== undefined && logo !== null) {
+    if (typeof logo !== 'string' || !logo.startsWith('data:image/') || logo.length > MAX_LOGO_DATA_URI_LENGTH) {
+      res.status(400).json({ error: 'Logo invalide (image trop lourde ou format non reconnu).' });
+      return;
+    }
+  }
 
   const squadron = await prisma.squadron.update({
     where: { id: 'singleton' },
@@ -971,6 +1001,7 @@ app.patch('/api/squadron', requireAuth, requirePermission('squadron.manage'), as
       ...(clean(tag) !== undefined && { tag: clean(tag) }),
       ...(clean(description) !== undefined && { description: clean(description) }),
       ...(clean(fondation) !== undefined && { fondation: clean(fondation) }),
+      ...(logo !== undefined && { logo }),
     },
   });
 
@@ -1286,9 +1317,9 @@ app.delete('/api/builds/:id', requireAuth, async (req, res) => {
 // ─── Forum ─────────────────────────────────────────────────────────────────
 
 const forumPostInclude = {
-  member: { select: { pseudo: true, role: { select: { name: true } } } },
+  member: { select: { pseudo: true, role: { select: { name: true, appellation: true } } } },
   comments: {
-    include: { member: { select: { pseudo: true, role: { select: { name: true } } } } },
+    include: { member: { select: { pseudo: true, role: { select: { name: true, appellation: true } } } } },
     orderBy: { createdAt: 'asc' as const },
   },
   _count: { select: { comments: true } },

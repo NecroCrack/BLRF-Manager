@@ -54,11 +54,13 @@ enum BuildStatus {
 
 // Configuration mono-ligne de l'escadron (id fixe "singleton").
 model Squadron {
-  id          String @id @default("singleton")
+  id          String  @id @default("singleton")
   nom         String
   tag         String
   description String
   fondation   String
+  // Data URI base64 (pas de stockage objet dédié pour ce projet à petite échelle).
+  logo        String?
 }
 
 model Member {
@@ -116,6 +118,12 @@ model Permission {
 model Role {
   id          String           @id @default(uuid())
   name        String           @unique
+  // Titre affiché devant le pseudo (ex. "Amiral", "Commandant") — plusieurs grades
+  // peuvent partager la même appellation, donc distinct de "name".
+  appellation String           @default("")
+  // Fonction/prérequis du grade, texte libre (fusionnés : pas de format assez
+  // homogène côté escadron pour séparer proprement les deux en base).
+  description String?
   rang        Int
   protege     Boolean          @default(false)
   members     Member[]

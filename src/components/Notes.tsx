@@ -110,7 +110,7 @@ export default function Notes() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center">
-        <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>CHARGEMENT DES NOTES…</span>
+        <span className="font-jbmono text-[13px]" style={{ color: "#3d5878" }}>CHARGEMENT DES NOTES…</span>
       </div>
     )
   }
@@ -125,13 +125,13 @@ export default function Notes() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-px h-4" style={{ background: "#a78bfa" }} />
-              <span className="font-orbitron text-[10px] tracking-widest" style={{ color: "#8aabca" }}>
+              <span className="font-orbitron text-[12px] tracking-widest" style={{ color: "#8aabca" }}>
                 MES NOTES
               </span>
             </div>
             <button
               onClick={startCreate}
-              className="font-orbitron text-[9px] px-2 py-1 clip-corner-sm transition-all"
+              className="font-orbitron text-[11px] px-2 py-1 clip-corner-sm transition-all"
               style={{ color: "#f28c1a", background: "rgba(242,140,26,0.1)", border: "1px solid rgba(242,140,26,0.3)" }}
               onMouseEnter={e => { e.currentTarget.style.background = "rgba(242,140,26,0.18)" }}
               onMouseLeave={e => { e.currentTarget.style.background = "rgba(242,140,26,0.1)" }}
@@ -146,7 +146,7 @@ export default function Notes() {
             style={{ background: "rgba(15,200,130,0.05)", border: "1px solid rgba(15,200,130,0.2)" }}
           >
             <span style={{ color: "#0fc882", fontSize: "12px" }}>🔒</span>
-            <span className="font-jbmono text-[9px]" style={{ color: "#0fc882" }}>
+            <span className="font-jbmono text-[11px]" style={{ color: "#0fc882" }}>
               PRIVÉ · VISIBLE PAR VOUS SEULEMENT
             </span>
           </div>
@@ -170,7 +170,7 @@ export default function Notes() {
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <div
-                      className="font-orbitron text-[9px] font-semibold truncate"
+                      className="font-orbitron text-[11px] font-semibold truncate"
                       style={{ color: isSelected ? "#f28c1a" : "#8aabca" }}
                     >
                       {note.titre}
@@ -182,18 +182,18 @@ export default function Notes() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span
-                      className="font-orbitron text-[8px] px-1.5 py-0.5 clip-corner-sm"
+                      className="font-orbitron text-[10px] px-1.5 py-0.5 clip-corner-sm"
                       style={{ color: catColor, background: `${catColor}10` }}
                     >
                       {note.categorie.toUpperCase()}
                     </span>
-                    <span className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>{note.dateMaj.slice(0, 10)}</span>
+                    <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>{note.dateMaj.slice(0, 10)}</span>
                   </div>
                 </button>
               )
             })}
             {notes.length === 0 && (
-              <div className="py-8 text-center font-jbmono text-[10px]" style={{ color: "#3d5878" }}>
+              <div className="py-8 text-center font-jbmono text-[12px]" style={{ color: "#3d5878" }}>
                 AUCUNE NOTE
               </div>
             )}
@@ -205,21 +205,21 @@ export default function Notes() {
           {creating ? (
             <div className="flex-1 flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <div className="font-orbitron text-[10px] tracking-widest" style={{ color: "#f28c1a" }}>
+                <div className="font-orbitron text-[12px] tracking-widest" style={{ color: "#f28c1a" }}>
                   NOUVELLE NOTE
                 </div>
                 <div className="flex items-center gap-2">
                   <select
                     value={editCategorie}
                     onChange={e => setEditCategorie(e.target.value)}
-                    className="font-jbmono text-[10px] px-2 py-1 clip-corner-sm"
+                    className="font-jbmono text-[12px] px-2 py-1 clip-corner-sm"
                     style={{ color: "#8aabca", background: "#070d1a", border: "1px solid #12223a" }}
                   >
                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <button
                     onClick={() => setCreating(false)}
-                    className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm transition-all"
+                    className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm transition-all"
                     style={{ color: "#3d5878", border: "1px solid #12223a", background: "#070d1a" }}
                   >
                     ANNULER
@@ -227,7 +227,7 @@ export default function Notes() {
                   <button
                     onClick={saveCreate}
                     disabled={saving}
-                    className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm transition-all disabled:opacity-50"
+                    className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm transition-all disabled:opacity-50"
                     style={{ color: "#f28c1a", background: "rgba(242,140,26,0.12)", border: "1px solid rgba(242,140,26,0.35)" }}
                     onMouseEnter={e => { e.currentTarget.style.background = "rgba(242,140,26,0.2)" }}
                     onMouseLeave={e => { e.currentTarget.style.background = "rgba(242,140,26,0.12)" }}
@@ -246,7 +246,7 @@ export default function Notes() {
               <textarea
                 value={editContent}
                 onChange={e => setEditContent(e.target.value)}
-                className="flex-1 font-jbmono text-[11px] bg-transparent outline-none resize-none"
+                className="flex-1 font-jbmono text-[13px] bg-transparent outline-none resize-none"
                 style={{ color: "#8aabca" }}
                 placeholder="Contenu de la note…"
               />
@@ -258,7 +258,7 @@ export default function Notes() {
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full" style={{ background: CAT_COLOR[selected.categorie] || "#3d5878" }} />
                   <span
-                    className="font-orbitron text-[9px] px-2 py-0.5 clip-corner-sm"
+                    className="font-orbitron text-[11px] px-2 py-0.5 clip-corner-sm"
                     style={{
                       color: CAT_COLOR[selected.categorie] || "#3d5878",
                       background: `${CAT_COLOR[selected.categorie] || "#3d5878"}10`,
@@ -266,7 +266,7 @@ export default function Notes() {
                   >
                     {selected.categorie.toUpperCase()}
                   </span>
-                  <span className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>
+                  <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>
                     Mis à jour le {selected.dateMaj.slice(0, 10)}
                   </span>
                 </div>
@@ -276,14 +276,14 @@ export default function Notes() {
                       <select
                         value={editCategorie}
                         onChange={e => setEditCategorie(e.target.value)}
-                        className="font-jbmono text-[10px] px-2 py-1 clip-corner-sm"
+                        className="font-jbmono text-[12px] px-2 py-1 clip-corner-sm"
                         style={{ color: "#8aabca", background: "#070d1a", border: "1px solid #12223a" }}
                       >
                         {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                       <button
                         onClick={() => setEditing(false)}
-                        className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm transition-all"
+                        className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm transition-all"
                         style={{ color: "#3d5878", border: "1px solid #12223a", background: "#070d1a" }}
                       >
                         ANNULER
@@ -291,7 +291,7 @@ export default function Notes() {
                       <button
                         onClick={saveEdit}
                         disabled={saving}
-                        className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm transition-all disabled:opacity-50"
+                        className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm transition-all disabled:opacity-50"
                         style={{ color: "#f28c1a", background: "rgba(242,140,26,0.12)", border: "1px solid rgba(242,140,26,0.35)" }}
                         onMouseEnter={e => { e.currentTarget.style.background = "rgba(242,140,26,0.2)" }}
                         onMouseLeave={e => { e.currentTarget.style.background = "rgba(242,140,26,0.12)" }}
@@ -303,7 +303,7 @@ export default function Notes() {
                     <>
                       <button
                         onClick={startEdit}
-                        className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm transition-all"
+                        className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm transition-all"
                         style={{ color: "#8aabca", border: "1px solid #12223a", background: "#070d1a" }}
                         onMouseEnter={e => { e.currentTarget.style.color = "#f28c1a"; e.currentTarget.style.borderColor = "rgba(242,140,26,0.3)" }}
                         onMouseLeave={e => { e.currentTarget.style.color = "#8aabca"; e.currentTarget.style.borderColor = "#12223a" }}
@@ -312,7 +312,7 @@ export default function Notes() {
                       </button>
                       <button
                         onClick={() => deleteNote(selected.id)}
-                        className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm transition-all"
+                        className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm transition-all"
                         style={{ color: "#e53030", border: "1px solid rgba(229,48,48,0.2)", background: "#070d1a" }}
                         onMouseEnter={e => { e.currentTarget.style.background = "rgba(229,48,48,0.08)" }}
                         onMouseLeave={e => { e.currentTarget.style.background = "#070d1a" }}
@@ -340,7 +340,7 @@ export default function Notes() {
                     <textarea
                       value={editContent}
                       onChange={e => setEditContent(e.target.value)}
-                      className="flex-1 font-jbmono text-[11px] bg-transparent outline-none resize-none"
+                      className="flex-1 font-jbmono text-[13px] bg-transparent outline-none resize-none"
                       style={{ color: "#8aabca" }}
                     />
                   </>
@@ -349,7 +349,7 @@ export default function Notes() {
                     <h2 className="font-orbitron text-base font-bold mb-4" style={{ color: "#8aabca", borderBottom: "1px solid #0c1828", paddingBottom: "12px" }}>
                       {selected.titre}
                     </h2>
-                    <div className="flex-1 overflow-y-auto scrollable font-jbmono text-[11px] leading-relaxed whitespace-pre-line" style={{ color: "#8aabca" }}>
+                    <div className="flex-1 overflow-y-auto scrollable font-jbmono text-[13px] leading-relaxed whitespace-pre-line" style={{ color: "#8aabca" }}>
                       {selected.contenu}
                     </div>
                   </>
@@ -362,12 +362,12 @@ export default function Notes() {
               style={{ background: "#070d1a", border: "1px solid #12223a" }}
             >
               <div className="font-orbitron text-[28px]" style={{ color: "#0c1828" }}>🔒</div>
-              <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>
+              <div className="font-jbmono text-[13px]" style={{ color: "#3d5878" }}>
                 Sélectionnez une note ou créez-en une nouvelle
               </div>
               <button
                 onClick={startCreate}
-                className="font-orbitron text-[9px] px-4 py-2 clip-corner-sm mt-2 transition-all tracking-wider"
+                className="font-orbitron text-[11px] px-4 py-2 clip-corner-sm mt-2 transition-all tracking-wider"
                 style={{ color: "#f28c1a", background: "rgba(242,140,26,0.1)", border: "1px solid rgba(242,140,26,0.3)" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(242,140,26,0.18)" }}
                 onMouseLeave={e => { e.currentTarget.style.background = "rgba(242,140,26,0.1)" }}

@@ -190,18 +190,18 @@ export default function StarMap() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="w-px h-4" style={{ background: "#2196f3" }} />
-            <span className="font-orbitron text-[11px] tracking-widest" style={{ color: "#8aabca" }}>
+            <span className="font-orbitron text-[13px] tracking-widest" style={{ color: "#8aabca" }}>
               PROJECTION GALACTIQUE — PLAN X/Z
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="font-jbmono text-[10px]" style={{ color: "#3d5878" }}>
+            <span className="font-jbmono text-[12px]" style={{ color: "#3d5878" }}>
               ZOOM {(scale / BASE_SCALE * 100).toFixed(0)}%
             </span>
             {canEditMap && (
               <button
                 onClick={() => setShowAddWaypoint(true)}
-                className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
+                className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
                 style={{ color: "#f28c1a", background: "rgba(242,140,26,0.1)", border: "1px solid rgba(242,140,26,0.3)" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(242,140,26,0.18)" }}
                 onMouseLeave={e => { e.currentTarget.style.background = "rgba(242,140,26,0.1)" }}
@@ -211,7 +211,7 @@ export default function StarMap() {
             )}
             <button
               onClick={resetView}
-              className="font-orbitron text-[9px] px-2.5 py-1 clip-corner-sm transition-all"
+              className="font-orbitron text-[11px] px-2.5 py-1 clip-corner-sm transition-all"
               style={{ border: "1px solid #12223a", color: "#3d5878", background: "#070d1a" }}
               onMouseEnter={e => { e.currentTarget.style.color = "#f28c1a"; e.currentTarget.style.borderColor = "rgba(242,140,26,0.4)" }}
               onMouseLeave={e => { e.currentTarget.style.color = "#3d5878"; e.currentTarget.style.borderColor = "#12223a" }}
@@ -227,17 +227,17 @@ export default function StarMap() {
           style={{ background: "#040810", border: "1px solid #12223a" }}
         >
           {/* Coordinate hint */}
-          <div className="absolute top-3 left-3 z-10 font-jbmono text-[9px]" style={{ color: "#1c3050" }}>
+          <div className="absolute top-3 left-3 z-10 font-jbmono text-[11px]" style={{ color: "#1c3050" }}>
             GLISSEZ POUR DÉPLACER · MOLETTE POUR ZOOMER
           </div>
           {/* Axis labels */}
-          <div className="absolute bottom-3 right-4 z-10 flex gap-4 font-jbmono text-[9px]" style={{ color: "#1c3050" }}>
+          <div className="absolute bottom-3 right-4 z-10 flex gap-4 font-jbmono text-[11px]" style={{ color: "#1c3050" }}>
             <span>X ↔</span>
             <span>Z ↕</span>
           </div>
 
           {(loading || error) && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center font-jbmono text-[11px]" style={{ color: error ? "#e53030" : "#3d5878" }}>
+            <div className="absolute inset-0 z-10 flex items-center justify-center font-jbmono text-[13px]" style={{ color: error ? "#e53030" : "#3d5878" }}>
               {error || "CHARGEMENT DE LA CARTE…"}
             </div>
           )}
@@ -416,12 +416,12 @@ export default function StarMap() {
           {Object.entries(TYPE_CONFIG).map(([type, cfg]) => (
             <div key={type} className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full" style={{ background: cfg.color }} />
-              <span className="font-orbitron text-[9px] tracking-wider" style={{ color: "#3d5878" }}>
+              <span className="font-orbitron text-[11px] tracking-wider" style={{ color: "#3d5878" }}>
                 {cfg.label.toUpperCase()}
               </span>
             </div>
           ))}
-          <div className="ml-auto font-jbmono text-[9px]" style={{ color: "#1c3050" }}>
+          <div className="ml-auto font-jbmono text-[11px]" style={{ color: "#1c3050" }}>
             {waypoints.length} SYSTÈMES RÉPERTORIÉS
           </div>
         </div>
@@ -437,7 +437,7 @@ export default function StarMap() {
             style={{ background: "#070d1a", border: "1px solid rgba(242,140,26,0.3)" }}
           >
             <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, #f28c1a60, transparent)" }} />
-            <div className="font-jbmono text-[9px] mb-1" style={{ color: "#3d5878" }}>SYSTÈME SÉLECTIONNÉ</div>
+            <div className="font-jbmono text-[11px] mb-1" style={{ color: "#3d5878" }}>SYSTÈME SÉLECTIONNÉ</div>
             <div className="font-orbitron text-sm font-bold mb-2 flex items-center gap-1.5" style={{ color: "#f28c1a" }}>
               {selected.pinned && <span className="text-xs">📌</span>}
               {selected.system.name}
@@ -450,36 +450,36 @@ export default function StarMap() {
               }}
             >
               <div className="w-1.5 h-1.5 rounded-full" style={{ background: TYPE_CONFIG[selected.type].color }} />
-              <span className="font-orbitron text-[8px]" style={{ color: TYPE_CONFIG[selected.type].color }}>
+              <span className="font-orbitron text-[10px]" style={{ color: TYPE_CONFIG[selected.type].color }}>
                 {TYPE_CONFIG[selected.type].label.toUpperCase()}
               </span>
             </div>
             <div className="space-y-1.5">
               <div>
-                <div className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>COORDONNÉES</div>
-                <div className="font-jbmono text-[10px]" style={{ color: "#8aabca" }}>
+                <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>COORDONNÉES</div>
+                <div className="font-jbmono text-[12px]" style={{ color: "#8aabca" }}>
                   X {selected.system.coordX.toFixed(1)} · Y {selected.system.coordY.toFixed(1)} · Z {selected.system.coordZ.toFixed(1)}
                 </div>
               </div>
               <div>
-                <div className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>DISTANCE DE SOL</div>
-                <div className="font-jbmono text-[10px]" style={{ color: "#8aabca" }}>{distanceFromSol(selected.system)}</div>
+                <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>DISTANCE DE SOL</div>
+                <div className="font-jbmono text-[12px]" style={{ color: "#8aabca" }}>{distanceFromSol(selected.system)}</div>
               </div>
               {selected.marker && (
                 <div>
-                  <div className="font-jbmono text-[9px] mb-1" style={{ color: "#3d5878" }}>NOTES</div>
-                  <div className="font-jbmono text-[10px] leading-relaxed" style={{ color: "#8aabca" }}>{selected.marker}</div>
+                  <div className="font-jbmono text-[11px] mb-1" style={{ color: "#3d5878" }}>NOTES</div>
+                  <div className="font-jbmono text-[12px] leading-relaxed" style={{ color: "#8aabca" }}>{selected.marker}</div>
                 </div>
               )}
               <div>
-                <div className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>AJOUTÉ PAR</div>
-                <div className="font-jbmono text-[10px]" style={{ color: "#8aabca" }}>CMDR {selected.createdBy}</div>
+                <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>AJOUTÉ PAR</div>
+                <div className="font-jbmono text-[12px]" style={{ color: "#8aabca" }}>CMDR {selected.createdBy}</div>
               </div>
             </div>
             {canEditMap && (
               <button
                 onClick={() => handleTogglePin(selected)}
-                className="mt-3 w-full font-orbitron text-[9px] py-1.5 clip-corner-sm transition-all"
+                className="mt-3 w-full font-orbitron text-[11px] py-1.5 clip-corner-sm transition-all"
                 style={{
                   border: `1px solid ${selected.pinned ? "rgba(242,140,26,0.4)" : "#12223a"}`,
                   color: selected.pinned ? "#f28c1a" : "#8aabca",
@@ -493,7 +493,7 @@ export default function StarMap() {
               <button
                 onClick={() => handleDelete(selected.id)}
                 disabled={deleting}
-                className="mt-2 w-full font-orbitron text-[9px] py-1.5 clip-corner-sm transition-all disabled:opacity-50"
+                className="mt-2 w-full font-orbitron text-[11px] py-1.5 clip-corner-sm transition-all disabled:opacity-50"
                 style={{ border: "1px solid rgba(229,48,48,0.3)", color: "#e53030", background: "rgba(229,48,48,0.08)" }}
               >
                 {deleting ? "SUPPRESSION…" : "SUPPRIMER LE WAYPOINT"}
@@ -501,7 +501,7 @@ export default function StarMap() {
             )}
             <button
               onClick={() => setSelected(null)}
-              className="mt-2 w-full font-orbitron text-[9px] py-1.5 clip-corner-sm transition-all"
+              className="mt-2 w-full font-orbitron text-[11px] py-1.5 clip-corner-sm transition-all"
               style={{ border: "1px solid #12223a", color: "#3d5878", background: "transparent" }}
               onMouseEnter={e => { e.currentTarget.style.color = "#f28c1a"; e.currentTarget.style.borderColor = "rgba(242,140,26,0.3)" }}
               onMouseLeave={e => { e.currentTarget.style.color = "#3d5878"; e.currentTarget.style.borderColor = "#12223a" }}
@@ -514,7 +514,7 @@ export default function StarMap() {
             className="clip-corner p-4"
             style={{ background: "#070d1a", border: "1px solid #12223a" }}
           >
-            <div className="font-jbmono text-[10px] text-center" style={{ color: "#1c3050" }}>
+            <div className="font-jbmono text-[12px] text-center" style={{ color: "#1c3050" }}>
               Cliquez sur un système<br />pour voir les détails
             </div>
           </div>
@@ -523,7 +523,7 @@ export default function StarMap() {
         {/* System list */}
         <div className="flex items-center gap-2 mt-1">
           <div className="w-px h-4" style={{ background: "#2196f3" }} />
-          <span className="font-orbitron text-[10px] tracking-widest" style={{ color: "#8aabca" }}>SYSTÈMES</span>
+          <span className="font-orbitron text-[12px] tracking-widest" style={{ color: "#8aabca" }}>SYSTÈMES</span>
         </div>
         <div className="flex-1 overflow-y-auto scrollable space-y-1">
           {waypoints.map(wp => {
@@ -543,11 +543,11 @@ export default function StarMap() {
               >
                 <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: cfg.color }} />
                 <div className="min-w-0 flex-1">
-                  <div className="font-orbitron text-[9px] truncate flex items-center gap-1" style={{ color: isSelected ? cfg.color : "#8aabca" }}>
+                  <div className="font-orbitron text-[11px] truncate flex items-center gap-1" style={{ color: isSelected ? cfg.color : "#8aabca" }}>
                     {wp.pinned && <span>📌</span>}
                     {wp.system.name}
                   </div>
-                  <div className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>
+                  <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>
                     {distanceFromSol(wp.system)}
                   </div>
                 </div>

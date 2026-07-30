@@ -18,6 +18,7 @@ export type PermissionKey =
 export interface AuthRole {
   id: string
   name: string
+  appellation: string
   rang: number
   protege: boolean
 }

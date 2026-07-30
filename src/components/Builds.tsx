@@ -62,16 +62,16 @@ function BuildCard({ build, selected, onSelect }: { build: ShipBuildApi; selecte
 
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="min-w-0">
-          <div className="font-orbitron text-[11px] font-semibold truncate mb-0.5" style={{ color: selected ? "#f28c1a" : "#8aabca" }}>
+          <div className="font-orbitron text-[13px] font-semibold truncate mb-0.5" style={{ color: selected ? "#f28c1a" : "#8aabca" }}>
             {build.nom}
           </div>
-          <div className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>
+          <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>
             CMDR {build.membre}
           </div>
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           <span className="text-lg" style={{ color: role.color }}>{role.icon}</span>
-          <span className="font-orbitron text-[7px] px-1 py-0.5 clip-corner-sm" style={{ color: status.color, background: `${status.color}12` }}>
+          <span className="font-orbitron text-[9px] px-1 py-0.5 clip-corner-sm" style={{ color: status.color, background: `${status.color}12` }}>
             {status.label.toUpperCase()}
           </span>
         </div>
@@ -83,9 +83,9 @@ function BuildCard({ build, selected, onSelect }: { build: ShipBuildApi; selecte
       >
         <span className="text-base">🚀</span>
         <div>
-          <div className="font-orbitron text-[10px]" style={{ color: "#8aabca" }}>{build.vaisseauModele}</div>
+          <div className="font-orbitron text-[12px]" style={{ color: "#8aabca" }}>{build.vaisseauModele}</div>
           {build.portee && (
-            <div className="font-jbmono text-[9px]" style={{ color: "#2196f3" }}>
+            <div className="font-jbmono text-[11px]" style={{ color: "#2196f3" }}>
               PORTÉE MAX: {build.portee}
             </div>
           )}
@@ -94,19 +94,19 @@ function BuildCard({ build, selected, onSelect }: { build: ShipBuildApi; selecte
 
       <div className="flex items-center justify-between">
         <span
-          className="font-orbitron text-[8px] px-2 py-0.5 clip-corner-sm"
+          className="font-orbitron text-[10px] px-2 py-0.5 clip-corner-sm"
           style={{ color: role.color, background: `${role.color}12`, border: `1px solid ${role.color}35` }}
         >
           {role.label.toUpperCase()}
         </span>
         <div className="flex items-center gap-2">
-          <span className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>{build.dateImport.slice(0, 10)}</span>
+          <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>{build.dateImport.slice(0, 10)}</span>
           <a
             href={build.lienCoriolis}
             target="_blank"
             rel="noopener noreferrer"
             onClick={e => e.stopPropagation()}
-            className="font-orbitron text-[8px] px-2 py-0.5 clip-corner-sm transition-all"
+            className="font-orbitron text-[10px] px-2 py-0.5 clip-corner-sm transition-all"
             style={{ color: "#2196f3", border: "1px solid rgba(33,150,243,0.3)", background: "rgba(33,150,243,0.08)" }}
             onMouseEnter={e => { e.currentTarget.style.background = "rgba(33,150,243,0.15)" }}
             onMouseLeave={e => { e.currentTarget.style.background = "rgba(33,150,243,0.08)" }}
@@ -200,7 +200,7 @@ export default function Builds() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center">
-        <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>CHARGEMENT DU HANGAR…</span>
+        <span className="font-jbmono text-[13px]" style={{ color: "#3d5878" }}>CHARGEMENT DU HANGAR…</span>
       </div>
     )
   }
@@ -212,17 +212,17 @@ export default function Builds() {
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <div className="w-px h-4" style={{ background: "#f28c1a" }} />
-          <span className="font-orbitron text-[11px] tracking-widest" style={{ color: "#8aabca" }}>
+          <span className="font-orbitron text-[13px] tracking-widest" style={{ color: "#8aabca" }}>
             HANGAR DE L'ESCADRON
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="font-jbmono text-[10px]" style={{ color: "#3d5878" }}>
+          <span className="font-jbmono text-[12px]" style={{ color: "#3d5878" }}>
             {filtered.length} BUILD{filtered.length > 1 ? "S" : ""} RÉPERTORIÉ{filtered.length > 1 ? "S" : ""}
           </span>
           <button
             onClick={() => setShowAdd(true)}
-            className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
+            className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
             style={{ color: "#f28c1a", background: "rgba(242,140,26,0.1)", border: "1px solid rgba(242,140,26,0.3)" }}
             onMouseEnter={e => { e.currentTarget.style.background = "rgba(242,140,26,0.18)" }}
             onMouseLeave={e => { e.currentTarget.style.background = "rgba(242,140,26,0.1)" }}
@@ -241,7 +241,7 @@ export default function Builds() {
             <button
               key={role}
               onClick={() => setRoleFilter(role)}
-              className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
+              className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
               style={{
                 color: active ? (cfg?.color || "#f28c1a") : "#3d5878",
                 background: active ? `${cfg?.color || "#f28c1a"}12` : "#070d1a",
@@ -267,7 +267,7 @@ export default function Builds() {
             />
           ))}
           {filtered.length === 0 && (
-            <div className="col-span-full clip-corner p-8 text-center font-jbmono text-[11px]" style={{ background: "#070d1a", border: "1px solid #12223a", color: "#3d5878" }}>
+            <div className="col-span-full clip-corner p-8 text-center font-jbmono text-[13px]" style={{ background: "#070d1a", border: "1px solid #12223a", color: "#3d5878" }}>
               AUCUN BUILD RÉPERTORIÉ
             </div>
           )}
@@ -284,7 +284,7 @@ export default function Builds() {
 
               <button
                 onClick={() => setSelectedId(null)}
-                className="absolute top-4 right-4 font-orbitron text-[9px] transition-colors"
+                className="absolute top-4 right-4 font-orbitron text-[11px] transition-colors"
                 style={{ color: "#3d5878" }}
                 onMouseEnter={e => (e.currentTarget.style.color = "#f28c1a")}
                 onMouseLeave={e => (e.currentTarget.style.color = "#3d5878")}
@@ -292,11 +292,11 @@ export default function Builds() {
                 ✕
               </button>
 
-              <div className="font-jbmono text-[9px] mb-1" style={{ color: "#3d5878" }}>FICHE BUILD</div>
+              <div className="font-jbmono text-[11px] mb-1" style={{ color: "#3d5878" }}>FICHE BUILD</div>
               <div className="font-orbitron text-sm font-bold mb-1" style={{ color: "#f28c1a" }}>
                 {selected.nom}
               </div>
-              <div className="font-jbmono text-[9px] mb-4" style={{ color: "#3d5878" }}>
+              <div className="font-jbmono text-[11px] mb-4" style={{ color: "#3d5878" }}>
                 par CMDR {selected.membre}
               </div>
 
@@ -308,17 +308,17 @@ export default function Builds() {
                   { label: "IMPORTÉ LE", value: selected.dateImport.slice(0, 10) },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex justify-between items-center" style={{ borderBottom: "1px solid #0c1828", paddingBottom: "8px" }}>
-                    <span className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>{label}</span>
-                    <span className="font-jbmono text-[10px]" style={{ color: "#8aabca" }}>{value}</span>
+                    <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>{label}</span>
+                    <span className="font-jbmono text-[12px]" style={{ color: "#8aabca" }}>{value}</span>
                   </div>
                 ))}
               </div>
 
               {selected.notes && (
                 <div className="mb-4">
-                  <div className="font-jbmono text-[9px] mb-2" style={{ color: "#3d5878" }}>NOTES</div>
+                  <div className="font-jbmono text-[11px] mb-2" style={{ color: "#3d5878" }}>NOTES</div>
                   <div
-                    className="clip-corner-sm p-3 font-jbmono text-[10px] leading-relaxed"
+                    className="clip-corner-sm p-3 font-jbmono text-[12px] leading-relaxed"
                     style={{ background: "#040810", color: "#8aabca", border: "1px solid #0c1828" }}
                   >
                     {selected.notes}
@@ -328,9 +328,9 @@ export default function Builds() {
 
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>STATUT</div>
+                  <div className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>STATUT</div>
                   <span
-                    className="font-orbitron text-[8px] px-2 py-0.5 clip-corner-sm"
+                    className="font-orbitron text-[10px] px-2 py-0.5 clip-corner-sm"
                     style={{ color: STATUS_CONFIG[selected.status].color, background: `${STATUS_CONFIG[selected.status].color}12` }}
                   >
                     {STATUS_CONFIG[selected.status].label.toUpperCase()}
@@ -341,7 +341,7 @@ export default function Builds() {
                     <button
                       onClick={() => changeStatus("APPROUVE")}
                       disabled={changingStatus || selected.status === "APPROUVE"}
-                      className="flex-1 font-orbitron text-[8px] py-1.5 clip-corner-sm transition-all disabled:opacity-40"
+                      className="flex-1 font-orbitron text-[10px] py-1.5 clip-corner-sm transition-all disabled:opacity-40"
                       style={{ color: "#0fc882", border: "1px solid rgba(15,200,130,0.3)", background: "rgba(15,200,130,0.08)" }}
                     >
                       APPROUVER
@@ -349,7 +349,7 @@ export default function Builds() {
                     <button
                       onClick={() => changeStatus("REJETE")}
                       disabled={changingStatus || selected.status === "REJETE"}
-                      className="flex-1 font-orbitron text-[8px] py-1.5 clip-corner-sm transition-all disabled:opacity-40"
+                      className="flex-1 font-orbitron text-[10px] py-1.5 clip-corner-sm transition-all disabled:opacity-40"
                       style={{ color: "#e53030", border: "1px solid rgba(229,48,48,0.3)", background: "rgba(229,48,48,0.08)" }}
                     >
                       REJETER
@@ -359,18 +359,18 @@ export default function Builds() {
               </div>
 
               <div className="mb-4">
-                <div className="font-jbmono text-[9px] mb-2" style={{ color: "#3d5878" }}>
+                <div className="font-jbmono text-[11px] mb-2" style={{ color: "#3d5878" }}>
                   RETOURS ({selected.comments.length})
                 </div>
                 <div className="space-y-2 mb-2 max-h-40 overflow-y-auto scrollable">
                   {selected.comments.map(c => (
                     <div key={c.id} className="clip-corner-sm p-2.5" style={{ background: "#040810", border: "1px solid #0c1828" }}>
-                      <div className="font-jbmono text-[9px] mb-1" style={{ color: "#f28c1a" }}>{c.reviewer}</div>
-                      <div className="font-jbmono text-[10px] leading-relaxed" style={{ color: "#8aabca" }}>{c.contenu}</div>
+                      <div className="font-jbmono text-[11px] mb-1" style={{ color: "#f28c1a" }}>{c.reviewer}</div>
+                      <div className="font-jbmono text-[12px] leading-relaxed" style={{ color: "#8aabca" }}>{c.contenu}</div>
                     </div>
                   ))}
                   {selected.comments.length === 0 && (
-                    <div className="font-jbmono text-[9px] py-1" style={{ color: "#1c3050" }}>Aucun retour pour l'instant.</div>
+                    <div className="font-jbmono text-[11px] py-1" style={{ color: "#1c3050" }}>Aucun retour pour l'instant.</div>
                   )}
                 </div>
                 {canApprove && (
@@ -379,13 +379,13 @@ export default function Builds() {
                       value={comment}
                       onChange={e => setComment(e.target.value)}
                       placeholder="Retour au créateur…"
-                      className="flex-1 font-jbmono text-[10px] bg-transparent outline-none px-2 py-1.5 clip-corner-sm"
+                      className="flex-1 font-jbmono text-[12px] bg-transparent outline-none px-2 py-1.5 clip-corner-sm"
                       style={{ color: "#8aabca", border: "1px solid #12223a" }}
                     />
                     <button
                       onClick={sendComment}
                       disabled={submittingComment || !comment.trim()}
-                      className="font-orbitron text-[8px] px-3 clip-corner-sm transition-all disabled:opacity-40"
+                      className="font-orbitron text-[10px] px-3 clip-corner-sm transition-all disabled:opacity-40"
                       style={{ color: "#f28c1a", border: "1px solid rgba(242,140,26,0.35)", background: "rgba(242,140,26,0.1)" }}
                     >
                       ENVOYER
@@ -398,7 +398,7 @@ export default function Builds() {
                 href={selected.lienCoriolis}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full block text-center font-orbitron text-[9px] py-2.5 clip-corner-sm tracking-widest transition-all mb-2"
+                className="w-full block text-center font-orbitron text-[11px] py-2.5 clip-corner-sm tracking-widest transition-all mb-2"
                 style={{ color: "#2196f3", border: "1px solid rgba(33,150,243,0.35)", background: "rgba(33,150,243,0.08)" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(33,150,243,0.15)" }}
                 onMouseLeave={e => { e.currentTarget.style.background = "rgba(33,150,243,0.08)" }}
@@ -410,7 +410,7 @@ export default function Builds() {
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="w-full font-orbitron text-[9px] py-2 clip-corner-sm tracking-widest transition-all disabled:opacity-50"
+                  className="w-full font-orbitron text-[11px] py-2 clip-corner-sm tracking-widest transition-all disabled:opacity-50"
                   style={{ color: "#e53030", border: "1px solid rgba(229,48,48,0.3)", background: "rgba(229,48,48,0.08)" }}
                 >
                   {deleting ? "SUPPRESSION…" : "SUPPRIMER LE BUILD"}

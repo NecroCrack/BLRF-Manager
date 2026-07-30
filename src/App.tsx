@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ChangeEvent } from "react"
 import Dashboard from "./components/Dashboard"
 import StarMap from "./components/StarMap"
 import Members from "./components/Members"
@@ -160,7 +160,10 @@ const SECTION_TITLES: Record<Section, string> = {
 interface SquadronApi {
   nom: string
   tag: string
+  logo: string | null
 }
+
+const MAX_LOGO_BYTES = 1_000_000 // ~1 Mo, avant encodage base64
 
 function AppShell() {
   const { user, loading, logout, hasPermission } = useAuth()
@@ -170,6 +173,46 @@ function AppShell() {
   const [squadron, setSquadron] = useState<SquadronApi | null>(null)
   const [onlineCount, setOnlineCount] = useState(0)
   const [activeMissionsCount, setActiveMissionsCount] = useState(0)
+  const [logoError, setLogoError] = useState<string | null>(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+
+  async function handleLogoChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file) return
+    setLogoError(null)
+    if (!file.type.startsWith("image/")) {
+      setLogoError("Le logo doit être une image.")
+      return
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      setLogoError("Image trop lourde (max ~1 Mo).")
+      return
+    }
+    setUploadingLogo(true)
+    try {
+      const dataUri = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(file)
+      })
+      const res = await fetch("/api/squadron", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ logo: dataUri }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setLogoError(data?.error || "Échec de l'envoi du logo.")
+        return
+      }
+      setSquadron(data)
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
 
   useEffect(() => {
     if (!user) return
@@ -187,7 +230,7 @@ function AppShell() {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center" style={{ background: "#04070d" }}>
-        <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>CHARGEMENT…</span>
+        <span className="font-jbmono text-[13px]" style={{ color: "#3d5878" }}>CHARGEMENT…</span>
       </div>
     )
   }
@@ -221,30 +264,49 @@ function AppShell() {
         <div className="px-4 py-5 border-b" style={{ borderColor: "#12223a" }}>
           {/* Logo mark */}
           <div className="flex items-center gap-3 mb-3">
-            <div
-              className="w-9 h-9 flex items-center justify-center clip-corner flex-shrink-0"
-              style={{ background: "rgba(242,140,26,0.15)", border: "1px solid rgba(242,140,26,0.5)" }}
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <path d="M9 1L16 14H2L9 1z" stroke="#f28c1a" strokeWidth="1.4" fill="none"/>
-                <circle cx="9" cy="10" r="2" fill="#f28c1a"/>
-              </svg>
+            <div className="relative flex-shrink-0 group">
+              <div
+                className="w-9 h-9 flex items-center justify-center clip-corner overflow-hidden"
+                style={{ background: "rgba(242,140,26,0.15)", border: "1px solid rgba(242,140,26,0.5)" }}
+              >
+                {squadron?.logo ? (
+                  <img src={squadron.logo} alt="Logo de l'escadron" className="w-full h-full object-cover" />
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <path d="M9 1L16 14H2L9 1z" stroke="#f28c1a" strokeWidth="1.4" fill="none"/>
+                    <circle cx="9" cy="10" r="2" fill="#f28c1a"/>
+                  </svg>
+                )}
+              </div>
+              {hasPermission("squadron.manage") && (
+                <label
+                  title="Modifier le logo"
+                  className="absolute -bottom-1 -right-1 w-4 h-4 flex items-center justify-center rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ background: "#070d1a", border: "1px solid rgba(242,140,26,0.5)" }}
+                >
+                  <span className="font-orbitron" style={{ fontSize: "7px", color: "#f28c1a" }}>{uploadingLogo ? "…" : "✎"}</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleLogoChange} disabled={uploadingLogo} />
+                </label>
+              )}
             </div>
             <div>
-              <div className="font-orbitron text-[10px] font-bold tracking-widest" style={{ color: "#f28c1a" }}>
+              <div className="font-orbitron text-[12px] font-bold tracking-widest" style={{ color: "#f28c1a" }}>
                 [{squadron?.tag ?? "…"}]
               </div>
-              <div className="font-orbitron text-[11px] font-semibold tracking-wider leading-tight" style={{ color: "#8aabca" }}>
+              <div className="font-orbitron text-[13px] font-semibold tracking-wider leading-tight" style={{ color: "#8aabca" }}>
                 {squadron?.nom ?? "Chargement…"}
               </div>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="pulse-dot w-1.5 h-1.5 rounded-full" style={{ background: "#0fc882" }} />
-            <span className="font-jbmono text-[10px]" style={{ color: "#3d5878" }}>
+            <span className="font-jbmono text-[12px]" style={{ color: "#3d5878" }}>
               {onlineCount} PILOTES EN LIGNE
             </span>
           </div>
+          {logoError && (
+            <div className="font-jbmono text-[11px] mt-1.5" style={{ color: "#e53030" }}>{logoError}</div>
+          )}
         </div>
 
         {/* Navigation */}
@@ -263,10 +325,10 @@ function AppShell() {
                 }}
               >
                 <span style={{ color: active ? "#f28c1a" : "#3d5878" }}>{item.icon}</span>
-                <span className="font-orbitron text-[9px] tracking-widest flex-1">{item.label}</span>
+                <span className="font-orbitron text-[11px] tracking-widest flex-1">{item.label}</span>
                 {item.badge !== undefined && (
                   <span
-                    className="font-jbmono text-[9px] px-1.5 py-0.5 clip-corner-sm"
+                    className="font-jbmono text-[11px] px-1.5 py-0.5 clip-corner-sm"
                     style={{
                       background: active ? "rgba(242,140,26,0.2)" : "rgba(30,143,255,0.15)",
                       color: active ? "#f28c1a" : "#2196f3",
@@ -290,18 +352,23 @@ function AppShell() {
         <div className="px-4 py-4 border-t" style={{ borderColor: "#12223a" }}>
           <div className="flex items-center gap-2.5">
             <div
-              className="w-8 h-8 flex items-center justify-center clip-corner-sm flex-shrink-0 font-orbitron text-[9px] font-bold"
+              className="w-8 h-8 flex items-center justify-center clip-corner-sm flex-shrink-0 font-orbitron text-[11px] font-bold"
               style={{ background: "rgba(242,140,26,0.12)", color: "#f28c1a", border: "1px solid rgba(242,140,26,0.3)" }}
             >
               {user.pseudo.slice(0, 2).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="font-orbitron text-[9px] font-semibold truncate" style={{ color: "#8aabca" }}>
+              <div className="font-orbitron text-[11px] font-semibold truncate" style={{ color: "#8aabca" }}>
                 CMDR {user.pseudo}
               </div>
-              <div className="font-jbmono text-[9px]" style={{ color: "#f28c1a" }}>
-                {user.role.name}
+              <div className="font-jbmono text-[11px]" style={{ color: "#f28c1a" }}>
+                {user.role.appellation}
               </div>
+              {user.role.name !== user.role.appellation && (
+                <div className="font-jbmono text-[10px] truncate" style={{ color: "#3d5878" }}>
+                  {user.role.name}
+                </div>
+              )}
             </div>
             <button
               onClick={() => setShowAccountSettings(true)}
@@ -355,11 +422,11 @@ function AppShell() {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <div className="font-jbmono text-[10px]" style={{ color: "#3d5878" }}>
+            <div className="font-jbmono text-[12px]" style={{ color: "#3d5878" }}>
               STARDATE 3308-01-14 · 14:32 GST
             </div>
             <div
-              className="px-2 py-1 clip-corner-sm font-jbmono text-[9px] tracking-wider"
+              className="px-2 py-1 clip-corner-sm font-jbmono text-[11px] tracking-wider"
               style={{ background: "rgba(15,200,130,0.1)", color: "#0fc882", border: "1px solid rgba(15,200,130,0.25)" }}
             >
               SYSTÈMES NOMINAUX

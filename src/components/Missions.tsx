@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "../context/AuthContext"
+import AddMissionModal from "./AddMissionModal"
 
 type MissionStatus = "EN_COURS" | "COMPLETE" | "ARCHIVE"
 type MissionType = "COMBAT" | "EXPLORATION" | "LOGISTIQUE" | "ESCORTE" | "INTERNE"
@@ -19,6 +20,7 @@ interface MissionApi {
   type: MissionType
   systeme: string | null
   systemId: string | null
+  responsableId: string | null
   responsable: string | null
   createdAt: string
   dateCompletion: string | null
@@ -64,6 +66,8 @@ export default function Missions() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [savingAssignees, setSavingAssignees] = useState(false)
   const [savingPanels, setSavingPanels] = useState(false)
+  const [showAddMission, setShowAddMission] = useState(false)
+  const [editingMission, setEditingMission] = useState<MissionApi | null>(null)
 
   useEffect(() => {
     fetch("/api/missions", { credentials: "include" })
@@ -120,7 +124,7 @@ export default function Missions() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center">
-        <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>CHARGEMENT DES OPÉRATIONS…</span>
+        <span className="font-jbmono text-[13px]" style={{ color: "#3d5878" }}>CHARGEMENT DES OPÉRATIONS…</span>
       </div>
     )
   }
@@ -132,7 +136,7 @@ export default function Missions() {
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <div className="w-px h-4" style={{ background: "#f28c1a" }} />
-          <span className="font-orbitron text-[11px] tracking-widest" style={{ color: "#8aabca" }}>
+          <span className="font-orbitron text-[13px] tracking-widest" style={{ color: "#8aabca" }}>
             TABLEAU DES OPÉRATIONS
           </span>
         </div>
@@ -144,7 +148,7 @@ export default function Missions() {
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className="font-orbitron text-[9px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
+                className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
                 style={{
                   color: active ? (cfg?.color || "#f28c1a") : "#3d5878",
                   background: active ? (cfg?.bg || "rgba(242,140,26,0.1)") : "#070d1a",
@@ -155,6 +159,15 @@ export default function Missions() {
               </button>
             )
           })}
+          {canManage && (
+            <button
+              onClick={() => setShowAddMission(true)}
+              className="font-orbitron text-[11px] px-3 py-1.5 clip-corner-sm tracking-wider transition-all"
+              style={{ color: "#f28c1a", background: "rgba(242,140,26,0.1)", border: "1px solid rgba(242,140,26,0.3)" }}
+            >
+              + NOUVELLE OPÉRATION
+            </button>
+          )}
         </div>
       </div>
 
@@ -169,7 +182,7 @@ export default function Missions() {
               className="clip-corner-sm p-3 flex items-center justify-between"
               style={{ background: "#07101e", border: "1px solid #12223a" }}
             >
-              <span className="font-orbitron text-[9px] tracking-wider" style={{ color: "#3d5878" }}>{cfg.label}</span>
+              <span className="font-orbitron text-[11px] tracking-wider" style={{ color: "#3d5878" }}>{cfg.label}</span>
               <span className="font-orbitron text-xl font-bold" style={{ color: cfg.color }}>{count}</span>
             </div>
           )
@@ -202,34 +215,34 @@ export default function Missions() {
                   <span className="text-base flex-shrink-0" style={{ color: type.color }}>{type.icon}</span>
 
                   <div className="flex-1 min-w-0">
-                    <div className="font-orbitron text-[11px] font-semibold truncate" style={{ color: isExpanded ? "#f28c1a" : "#8aabca" }}>
+                    <div className="font-orbitron text-[13px] font-semibold truncate" style={{ color: isExpanded ? "#f28c1a" : "#8aabca" }}>
                       {mission.title}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
                       {mission.systeme && (
-                        <span className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>◎ {mission.systeme}</span>
+                        <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>◎ {mission.systeme}</span>
                       )}
                       {mission.responsable && (
-                        <span className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>CMDR {mission.responsable}</span>
+                        <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>CMDR {mission.responsable}</span>
                       )}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span
-                      className="font-orbitron text-[8px] px-2 py-0.5 clip-corner-sm"
+                      className="font-orbitron text-[10px] px-2 py-0.5 clip-corner-sm"
                       style={{ color: priority.color, background: `${priority.color}12`, border: `1px solid ${priority.color}35` }}
                     >
                       {priority.label}
                     </span>
                     <span
-                      className="font-orbitron text-[8px] px-2 py-0.5 clip-corner-sm"
+                      className="font-orbitron text-[10px] px-2 py-0.5 clip-corner-sm"
                       style={{ color: status.color, background: status.bg, border: `1px solid ${status.color}35` }}
                     >
                       {status.label}
                     </span>
                     <span
-                      className="font-orbitron text-[9px] transition-transform"
+                      className="font-orbitron text-[11px] transition-transform"
                       style={{ color: "#3d5878", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
                     >
                       ▾
@@ -239,11 +252,22 @@ export default function Missions() {
 
                 {isExpanded && (
                   <div className="px-4 pb-4" style={{ borderTop: "1px solid #0c1828" }}>
+                    {canManage && (
+                      <div className="flex justify-end pt-3">
+                        <button
+                          onClick={() => setEditingMission(mission)}
+                          className="font-orbitron text-[10px] px-3 py-1.5 clip-corner-sm transition-all"
+                          style={{ color: "#8aabca", border: "1px solid #12223a", background: "transparent" }}
+                        >
+                          ✎ MODIFIER L'OPÉRATION
+                        </button>
+                      </div>
+                    )}
                     <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="md:col-span-2">
-                        <div className="font-jbmono text-[9px] mb-2" style={{ color: "#3d5878" }}>BRIEFING OPÉRATION</div>
+                        <div className="font-jbmono text-[11px] mb-2" style={{ color: "#3d5878" }}>BRIEFING OPÉRATION</div>
                         <div
-                          className="clip-corner-sm p-3 font-jbmono text-[10px] leading-relaxed"
+                          className="clip-corner-sm p-3 font-jbmono text-[12px] leading-relaxed"
                           style={{ background: "#040810", color: "#8aabca", border: "1px solid #0c1828" }}
                         >
                           {mission.description}
@@ -260,8 +284,8 @@ export default function Missions() {
                           ...(mission.dateCompletion ? [{ label: "COMPLÉTÉE LE", value: mission.dateCompletion.slice(0, 10), color: "#0fc882" }] : []),
                         ].map(({ label, value, color }) => (
                           <div key={label} className="flex justify-between" style={{ borderBottom: "1px solid #0c1828", paddingBottom: "6px" }}>
-                            <span className="font-jbmono text-[9px]" style={{ color: "#3d5878" }}>{label}</span>
-                            <span className="font-jbmono text-[10px]" style={{ color }}>{value}</span>
+                            <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>{label}</span>
+                            <span className="font-jbmono text-[12px]" style={{ color }}>{value}</span>
                           </div>
                         ))}
                       </div>
@@ -269,14 +293,14 @@ export default function Missions() {
 
                     {/* Membres assignés */}
                     <div className="mt-4">
-                      <div className="font-jbmono text-[9px] mb-2" style={{ color: "#3d5878" }}>
+                      <div className="font-jbmono text-[11px] mb-2" style={{ color: "#3d5878" }}>
                         MEMBRES ASSIGNÉS ({mission.assignees.length})
                       </div>
                       <div className="flex flex-wrap gap-2 mb-2">
                         {mission.assignees.map(a => (
                           <span
                             key={a.id}
-                            className="font-jbmono text-[9px] px-2 py-1 clip-corner-sm flex items-center gap-1.5"
+                            className="font-jbmono text-[11px] px-2 py-1 clip-corner-sm flex items-center gap-1.5"
                             style={{ background: "#040810", border: "1px solid #0c1828", color: "#8aabca" }}
                           >
                             <span className="w-1.5 h-1.5 rounded-full" style={{ background: a.online ? "#0fc882" : "#3d5878" }} />
@@ -284,7 +308,7 @@ export default function Missions() {
                           </span>
                         ))}
                         {mission.assignees.length === 0 && (
-                          <span className="font-jbmono text-[9px]" style={{ color: "#1c3050" }}>Aucun membre assigné.</span>
+                          <span className="font-jbmono text-[11px]" style={{ color: "#1c3050" }}>Aucun membre assigné.</span>
                         )}
                       </div>
                       {canManage && (
@@ -296,7 +320,7 @@ export default function Missions() {
                                 key={m.id}
                                 disabled={savingAssignees}
                                 onClick={() => toggleAssignee(mission, m.id)}
-                                className="font-orbitron text-[8px] px-2 py-1 clip-corner-sm transition-all disabled:opacity-50"
+                                className="font-orbitron text-[10px] px-2 py-1 clip-corner-sm transition-all disabled:opacity-50"
                                 style={{
                                   color: active ? "#f28c1a" : "#3d5878",
                                   background: active ? "rgba(242,140,26,0.1)" : "transparent",
@@ -314,7 +338,7 @@ export default function Missions() {
                     {/* Panneaux live du tableau de bord */}
                     {canManageDashboard && (
                       <div className="mt-4 pt-3" style={{ borderTop: "1px solid #0c1828" }}>
-                        <div className="font-jbmono text-[9px] mb-2" style={{ color: "#3d5878" }}>
+                        <div className="font-jbmono text-[11px] mb-2" style={{ color: "#3d5878" }}>
                           PANNEAUX LIVE SUR LE TABLEAU DE BORD
                         </div>
                         <div className="flex gap-4">
@@ -325,7 +349,7 @@ export default function Missions() {
                               disabled={savingPanels}
                               onChange={() => togglePanel(mission, "showEdsmPanel")}
                             />
-                            <span className="font-jbmono text-[9px]" style={{ color: "#8aabca" }}>État EDSM du système</span>
+                            <span className="font-jbmono text-[11px]" style={{ color: "#8aabca" }}>État EDSM du système</span>
                           </label>
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input
@@ -334,7 +358,7 @@ export default function Missions() {
                               disabled={savingPanels}
                               onChange={() => togglePanel(mission, "showMemberStatusPanel")}
                             />
-                            <span className="font-jbmono text-[9px]" style={{ color: "#8aabca" }}>Statut des membres assignés</span>
+                            <span className="font-jbmono text-[11px]" style={{ color: "#8aabca" }}>Statut des membres assignés</span>
                           </label>
                         </div>
                       </div>
@@ -348,9 +372,25 @@ export default function Missions() {
       </div>
 
       {filtered.length === 0 && (
-        <div className="py-16 text-center font-jbmono text-[11px]" style={{ color: "#3d5878" }}>
+        <div className="py-16 text-center font-jbmono text-[13px]" style={{ color: "#3d5878" }}>
           AUCUNE OPÉRATION NE CORRESPOND AUX FILTRES
         </div>
+      )}
+
+      {showAddMission && (
+        <AddMissionModal
+          members={members}
+          onClose={() => setShowAddMission(false)}
+          onSaved={m => { setMissions(prev => [m as MissionApi, ...prev]); setShowAddMission(false) }}
+        />
+      )}
+      {editingMission && (
+        <AddMissionModal
+          mission={editingMission}
+          members={members}
+          onClose={() => setEditingMission(null)}
+          onSaved={m => { updateMission(m as MissionApi); setEditingMission(null) }}
+        />
       )}
     </div>
   )
