@@ -99,6 +99,8 @@ model Member {
   messagesSent        Message[]         @relation("MessageSender")
   messagesReceived    Message[]         @relation("MessageRecipient")
   colonisationSitesAdded ColonisationSite[]
+
+  @@index([roleId])
 }
 
 // Catalogue fixe des droits possibles (défini en code, seedé en base).

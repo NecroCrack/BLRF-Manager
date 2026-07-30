@@ -1,9 +1,6 @@
 -- CreateEnum
 CREATE TYPE "BuildStatus" AS ENUM ('EN_ATTENTE', 'APPROUVE', 'REJETE');
 
--- DropIndex
-DROP INDEX "Member_roleId_idx";
-
 -- AlterTable
 ALTER TABLE "ShipBuild" ADD COLUMN     "status" "BuildStatus" NOT NULL DEFAULT 'EN_ATTENTE';
 
