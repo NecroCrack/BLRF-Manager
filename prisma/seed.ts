@@ -20,14 +20,22 @@ async function main() {
     },
   });
 
-  const existing = await prisma.member.findUnique({ where: { matricule: 'BLRF-001' } });
-  if (existing) {
-    console.log('[SEED] BLRF-001 existe déjà — aucun changement (le mot de passe existant est conservé).');
+  // Idempotence basée sur "un membre existe déjà", pas sur un matricule figé : BLRF-001 a été
+  // renommé en BLRF-143 lors de la refonte des rôles, et comme preDeployCommand relance ce seed
+  // à CHAQUE déploiement (pas seulement au premier), chercher BLRF-001 littéralement ne retrouvait
+  // plus rien après ce renommage → le seed retombait dans le chemin "création initiale" et
+  // plantait plus loin. Voir aussi le rôle protégé ci-dessous, même raisonnement.
+  const anyMember = await prisma.member.findFirst();
+  if (anyMember) {
+    console.log('[SEED] Des membres existent déjà — aucun changement.');
     return;
   }
 
-  // Rôle protégé seedé par la migration "dynamic_roles_permissions" — toujours présent.
-  const commandantRole = await prisma.role.findUniqueOrThrow({ where: { name: 'COMMANDANT' } });
+  // Rôle protégé (garanti unique et indestructible, voir schema.prisma) — peu importe son nom
+  // actuel : il a été renommé COMMANDANT -> Ingénieur par le CO depuis Rôles & Permissions.
+  // Chercher par nom figé cassait pour la même raison que ci-dessus ; le flag "protege" est
+  // l'identifiant stable voulu par le schéma, jamais rebaptisable.
+  const commandantRole = await prisma.role.findFirstOrThrow({ where: { protege: true } });
 
   // Généré à chaque exécution : jamais de mot de passe par défaut prévisible, jamais stocké en clair.
   const password = process.env.SEED_COMMANDANT_PASSWORD || generateStrongPassword();
