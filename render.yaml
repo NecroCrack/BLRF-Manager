@@ -24,5 +24,6 @@ services:
 databases:
   - name: blrf-db
     plan: basic-256mb
+    region: frankfurt
     databaseName: blrf_escadron
     user: blrf_app
