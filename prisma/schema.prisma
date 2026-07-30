@@ -190,6 +190,10 @@ model ColonisationSite {
   // contrairement au nom qui peut changer une fois le site terminé). Nul pour les sites
   // ajoutés manuellement avant tout rapport du plugin EDMC.
   marketId      String?  @unique
+  // Matériaux restants (ResourcesRequired de l'événement journal), poussés par le plugin EDMC —
+  // alimente la recherche de marché (voir /api/colonisation/:id/check-system). Nul tant que le
+  // plugin n'a pas encore rapporté ce site.
+  resources     Json?
   lastUpdatedAt DateTime @default(now())
   addedById     String
   addedBy       Member   @relation(fields: [addedById], references: [id])

@@ -96,3 +96,34 @@ export function parseLoadout(raw: unknown): ParsedLoadout | null {
     modules,
   };
 }
+
+export interface PublicColonisationResource {
+  // Nom interne (ex. "aluminium") — sert de clé de correspondance avec les commodités EDSM lors
+  // de la recherche de marché (voir /api/colonisation/:id/check-system).
+  name: string;
+  nameLocalised: string;
+  required: number;
+  provided: number;
+}
+
+// Best-effort sur le tableau ResourcesRequired de l'événement ColonisationConstructionDepot —
+// jamais de plantage sur une entrée mal formée, elle est simplement ignorée.
+export function parseResources(raw: unknown): PublicColonisationResource[] | null {
+  if (!Array.isArray(raw)) return null;
+  const out: PublicColonisationResource[] = [];
+  for (const r of raw) {
+    if (!r || typeof r !== 'object') continue;
+    const item = r as Record<string, unknown>;
+    const name = typeof item.Name === 'string' && item.Name.trim() ? item.Name : null;
+    if (!name) continue;
+    out.push({
+      name,
+      nameLocalised: typeof item.Name_Localised === 'string' && item.Name_Localised.trim()
+        ? item.Name_Localised
+        : prettifyModuleItem(name),
+      required: typeof item.RequiredAmount === 'number' ? item.RequiredAmount : 0,
+      provided: typeof item.ProvidedAmount === 'number' ? item.ProvidedAmount : 0,
+    });
+  }
+  return out.length > 0 ? out : null;
+}

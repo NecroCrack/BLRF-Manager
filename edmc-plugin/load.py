@@ -149,5 +149,8 @@ def journal_entry(cmdr, is_beta, system, station, entry, state):
             "siteType": state.get("StationType") or "Inconnu",
             "marketId": str(market_id) if market_id else None,
             "progressPct": _extract_progress_pct(entry),
+            # Liste des matériaux restants telle que fournie par le jeu — transmise telle quelle,
+            # le serveur la valide/normalise (voir server/edLoadout.ts:parseResources).
+            "resources": entry.get("ResourcesRequired"),
             "statusText": "Terminé" if entry.get("ConstructionComplete") else None,
         })

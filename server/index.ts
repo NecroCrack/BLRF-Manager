@@ -22,7 +22,8 @@ import { createPluginAuthMiddleware, generatePluginToken, hashPluginToken } from
 import { generateStrongPassword } from './passwords';
 import { encrypt } from './crypto';
 import { startInaraSyncCron } from './cron';
-import { parseLoadout, canonicalJson } from './edLoadout';
+import { parseLoadout, canonicalJson, parseResources } from './edLoadout';
+import { checkSystemForResources } from './edsmMarket';
 
 dotenv.config();
 
@@ -279,6 +280,7 @@ function toPublicColonisationSite(s: ColonisationSiteWithRelations) {
     dateMaj: s.lastUpdatedAt,
     ajoutePar: s.addedBy.pseudo,
     systeme: { id: s.system.id, name: s.system.name, coordX: s.system.coordX, coordY: s.system.coordY, coordZ: s.system.coordZ },
+    ressources: s.resources as import('./edLoadout').PublicColonisationResource[] | null,
   };
 }
 
@@ -757,12 +759,13 @@ app.post('/api/plugin/location', requirePluginToken, async (req, res) => {
 });
 
 app.post('/api/plugin/colonisation', requirePluginToken, async (req, res) => {
-  const { systemName, name, siteType, progressPct, statusText, marketId } = req.body ?? {};
+  const { systemName, name, siteType, progressPct, statusText, marketId, resources } = req.body ?? {};
   if (typeof systemName !== 'string' || !systemName.trim() || typeof name !== 'string' || !name.trim() || typeof siteType !== 'string' || !siteType.trim()) {
     res.status(400).json({ error: 'Système, nom et type de site requis.' });
     return;
   }
   const marketIdStr = typeof marketId === 'string' || typeof marketId === 'number' ? String(marketId).trim() : null;
+  const parsedResources = parseResources(resources);
 
   let coords: EdsmSystem | null;
   try {
@@ -804,6 +807,7 @@ app.post('/api/plugin/colonisation', requirePluginToken, async (req, res) => {
         progressPct: typeof progressPct === 'number' ? progressPct : null,
         statusText: typeof statusText === 'string' ? statusText.trim() : null,
         marketId: marketIdStr,
+        resources: parsedResources ? (parsedResources as unknown as Prisma.InputJsonValue) : undefined,
         addedById: req.pluginMember!.id,
       },
       include: colonisationSiteInclude,
@@ -821,6 +825,9 @@ app.post('/api/plugin/colonisation', requirePluginToken, async (req, res) => {
       statusText: typeof statusText === 'string' ? statusText.trim() : existing.statusText,
       // Backfill : rattache un site ajouté manuellement (sans marketId) au premier rapport du plugin.
       marketId: existing.marketId ?? marketIdStr,
+      // Conserve la dernière liste connue si ce rapport n'en contient pas (même logique que
+      // progressPct/statusText ci-dessus) plutôt que d'effacer une donnée déjà acquise.
+      resources: parsedResources ? (parsedResources as unknown as Prisma.InputJsonValue) : existing.resources ?? undefined,
       lastUpdatedAt: new Date(),
     },
     include: colonisationSiteInclude,
@@ -871,6 +878,40 @@ app.get('/api/colonisation', requireAuth, async (req, res) => {
     orderBy: { lastUpdatedAt: 'desc' },
   });
   res.json(sites.map(toPublicColonisationSite));
+});
+
+// Vérifie si un système (généralement un hub commercial déjà connu de l'escadron, pas une
+// recherche galactique — voir server/edsmMarket.ts) a en stock les matériaux encore requis par ce
+// site. Coût borné en requêtes EDSM (quota partagé) : jamais plus de 1 + 8 appels par vérification.
+app.get('/api/colonisation/:id/check-system', requireAuth, async (req, res) => {
+  const systemName = typeof req.query.systemName === 'string' ? req.query.systemName.trim() : '';
+  if (!systemName) {
+    res.status(400).json({ error: 'Nom de système requis.' });
+    return;
+  }
+  const site = await prisma.colonisationSite.findUnique({ where: { id: req.params.id as string } });
+  if (!site) {
+    res.status(404).json({ error: 'Site introuvable.' });
+    return;
+  }
+  // site.resources est déjà normalisé (parseResources s'applique une seule fois, à l'écriture
+  // dans POST /api/plugin/colonisation) — le relire tel quel, pas le re-parser.
+  const resources = site.resources as import('./edLoadout').PublicColonisationResource[] | null;
+  if (!resources || resources.length === 0) {
+    res.status(400).json({ error: "Aucun matériau connu pour ce site pour l'instant (en attente du plugin EDMC)." });
+    return;
+  }
+
+  try {
+    const result = await checkSystemForResources(systemName, resources.map(r => r.name), consumeEdsmQuota);
+    if (!result) {
+      res.status(404).json({ error: 'Système introuvable sur EDSM.' });
+      return;
+    }
+    res.json(result);
+  } catch {
+    res.status(429).json({ error: 'Limite de requêtes EDSM atteinte, réessayez plus tard.' });
+  }
 });
 
 // Ajout manuel d'un site à suivre (le membre choisit le système) — la progression elle-même

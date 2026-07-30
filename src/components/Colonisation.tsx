@@ -1,6 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react"
 import { useAuth } from "../context/AuthContext"
 
+interface ColonisationResourceApi {
+  name: string
+  nameLocalised: string
+  required: number
+  provided: number
+}
+
 interface ColonisationSiteApi {
   id: string
   nom: string
@@ -10,6 +17,133 @@ interface ColonisationSiteApi {
   dateMaj: string
   ajoutePar: string
   systeme: { id: string; name: string; coordX: number; coordY: number; coordZ: number }
+  ressources: ColonisationResourceApi[] | null
+}
+
+interface MarketMatch {
+  stationName: string
+  marketId: number
+  distanceToArrival: number
+  buyPrice: number
+  stock: number
+}
+
+interface CheckSystemResult {
+  systemName: string
+  matches: Record<string, MarketMatch[]>
+  stationsChecked: number
+  partial: boolean
+}
+
+function MarketSearch({ site }: { site: ColonisationSiteApi }) {
+  const [open, setOpen] = useState(false)
+  const [systemName, setSystemName] = useState("")
+  const [result, setResult] = useState<CheckSystemResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [searching, setSearching] = useState(false)
+
+  const outstanding = (site.ressources ?? []).filter(r => r.provided < r.required)
+
+  async function handleSearch(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setResult(null)
+    setSearching(true)
+    try {
+      const res = await fetch(`/api/colonisation/${site.id}/check-system?systemName=${encodeURIComponent(systemName)}`, { credentials: "include" })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setError(data?.error || "Échec de la recherche.")
+        return
+      }
+      setResult(data)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  if (!site.ressources || outstanding.length === 0) return null
+
+  return (
+    <div className="mt-3 pt-3" style={{ borderTop: "1px solid #0c1828" }}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>MATÉRIAUX RESTANTS</span>
+        <button
+          type="button"
+          onClick={() => setOpen(v => !v)}
+          className="font-orbitron text-[10px] tracking-wider transition-colors"
+          style={{ color: open ? "#f28c1a" : "#2196f3" }}
+        >
+          {open ? "▾ FERMER" : "▸ VÉRIFIER UN SYSTÈME"}
+        </button>
+      </div>
+      <div className="space-y-1 mb-2">
+        {outstanding.map(r => (
+          <div key={r.name} className="flex items-center justify-between px-2 py-1 clip-corner-sm" style={{ background: "#040810", border: "1px solid #0c1828" }}>
+            <span className="font-jbmono text-[11px]" style={{ color: "#8aabca" }}>{r.nameLocalised}</span>
+            <span className="font-jbmono text-[11px]" style={{ color: "#3d5878" }}>{r.provided} / {r.required}</span>
+          </div>
+        ))}
+      </div>
+
+      {open && (
+        <div>
+          <form onSubmit={handleSearch} className="flex gap-2 mb-2">
+            <input
+              value={systemName}
+              onChange={e => setSystemName(e.target.value)}
+              placeholder="Système à vérifier (ex. Deciat)"
+              required
+              className="flex-1 font-jbmono text-[12px] bg-transparent outline-none px-2 py-1.5 clip-corner-sm"
+              style={{ color: "#8aabca", border: "1px solid #12223a" }}
+            />
+            <button
+              type="submit"
+              disabled={searching}
+              className="font-orbitron text-[10px] px-3 clip-corner-sm transition-all disabled:opacity-40"
+              style={{ color: "#2196f3", border: "1px solid rgba(33,150,243,0.35)", background: "rgba(33,150,243,0.1)" }}
+            >
+              {searching ? "…" : "CHERCHER"}
+            </button>
+          </form>
+
+          {error && (
+            <div className="font-jbmono text-[11px] mb-2 px-2 py-1.5 clip-corner-sm" style={{ color: "#e53030", background: "rgba(229,48,48,0.1)", border: "1px solid rgba(229,48,48,0.25)" }}>
+              {error}
+            </div>
+          )}
+
+          {result && (
+            <div className="space-y-2">
+              {outstanding.map(r => {
+                const stations = result.matches[r.name] ?? []
+                return (
+                  <div key={r.name}>
+                    <div className="font-jbmono text-[10px] mb-1" style={{ color: "#3d5878" }}>{r.nameLocalised}</div>
+                    {stations.length === 0 ? (
+                      <div className="font-jbmono text-[11px] pl-2" style={{ color: "#1c3050" }}>Pas en vente à {result.systemName}.</div>
+                    ) : (
+                      stations.map(s => (
+                        <div key={s.marketId} className="flex items-center justify-between pl-2 pr-2 py-1 font-jbmono text-[11px]" style={{ color: "#0fc882" }}>
+                          <span>{s.stationName}</span>
+                          <span>{s.buyPrice.toLocaleString("fr-FR")} cr · stock {s.stock.toLocaleString("fr-FR")}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )
+              })}
+              {result.partial && (
+                <div className="font-jbmono text-[10px]" style={{ color: "#3d5878" }}>
+                  Vérification partielle ({result.stationsChecked} station{result.stationsChecked > 1 ? "s" : ""} contrôlée{result.stationsChecked > 1 ? "s" : ""}, quota EDSM atteint).
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function AddSiteForm({ onClose, onCreated }: { onClose: () => void; onCreated: (s: ColonisationSiteApi) => void }) {
@@ -173,6 +307,8 @@ export default function Colonisation() {
             <div className="font-jbmono text-[10px]" style={{ color: "#3d5878" }}>
               ajouté par CMDR {site.ajoutePar} · maj {new Date(site.dateMaj).toLocaleString("fr-FR")}
             </div>
+
+            <MarketSearch site={site} />
           </div>
         ))}
         {sites.length === 0 && (
