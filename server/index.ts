@@ -1,5 +1,6 @@
 // server/index.ts
 import path from 'node:path';
+import fs from 'node:fs';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -25,6 +26,7 @@ import { startInaraSyncCron } from './cron';
 import { parseLoadout, canonicalJson, parseResources } from './edLoadout';
 import { checkSystemForResources } from './edsmMarket';
 import { parseFactions, parseEdsmFactions, edsmControllingFactionName } from './edFactions';
+import { createZip } from './zip';
 
 dotenv.config();
 
@@ -313,6 +315,25 @@ function toPublicSquadron(sq: Prisma.SquadronGetPayload<{}>, commandant: string 
 // Route de test
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Le serveur Express tourne correctement.' });
+});
+
+// Public (pas de requireAuth) : téléchargeable depuis l'écran de connexion, avant authentification
+// — un nouveau membre doit pouvoir le récupérer sans compte, sinon impossible d'utiliser le plugin
+// pour la première fois. Empaqueté à la demande depuis les vrais fichiers du dépôt (jamais figé
+// dans un artefact séparé qui pourrait dévier du plugin réellement en service).
+app.get('/api/plugin/edmc-download', (req, res) => {
+  try {
+    const pluginDir = path.join(import.meta.dirname, '..', 'edmc-plugin');
+    const zip = createZip([
+      { name: 'edmc-plugin/load.py', data: fs.readFileSync(path.join(pluginDir, 'load.py')) },
+      { name: 'edmc-plugin/README.md', data: fs.readFileSync(path.join(pluginDir, 'README.md')) },
+    ]);
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="blrf-squadron-manager-edmc-plugin.zip"');
+    res.send(zip);
+  } catch {
+    res.status(500).json({ error: 'Échec de la génération du plugin.' });
+  }
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -1418,8 +1439,22 @@ app.get('/api/squadron', async (req, res) => {
 // Data URI base64 uniquement (pas de stockage objet) — plafonné pour éviter de gonfler la base.
 const MAX_LOGO_DATA_URI_LENGTH = 1_500_000; // ~1MB en base64
 
-app.patch('/api/squadron', requireAuth, requirePermission('squadron.manage'), async (req, res) => {
+// Pas de requirePermission unique : 'squadron.manage' peut tout modifier (identité de
+// l'escadron), 'dashboard.manage' peut modifier uniquement la description (contenu éditorial du
+// tableau de bord, pas l'identité — nom/tag/logo/fondation restent réservés à squadron.manage).
+app.patch('/api/squadron', requireAuth, async (req, res) => {
   const { nom, tag, description, fondation, logo } = req.body ?? {};
+
+  const canManageSquadron = await memberHasPermission(prisma, req.user!.roleId, 'squadron.manage');
+  if (!canManageSquadron) {
+    const canManageDashboard = await memberHasPermission(prisma, req.user!.roleId, 'dashboard.manage');
+    const touchesRestrictedField = nom !== undefined || tag !== undefined || fondation !== undefined || logo !== undefined;
+    if (!canManageDashboard || touchesRestrictedField) {
+      res.status(403).json({ error: 'Permissions insuffisantes.' });
+      return;
+    }
+  }
+
   const clean = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
 
   if (logo !== undefined && logo !== null) {

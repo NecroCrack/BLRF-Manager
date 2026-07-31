@@ -194,6 +194,9 @@ export default function Dashboard({ onNavigate }: Props) {
   const canManagePins = hasPermission("dashboard.manage")
 
   const [squadron, setSquadron] = useState<SquadronApi | null>(null)
+  const [editingDescription, setEditingDescription] = useState(false)
+  const [descriptionDraft, setDescriptionDraft] = useState("")
+  const [savingDescription, setSavingDescription] = useState(false)
   const [missions, setMissions] = useState<MissionApi[]>([])
   const [members, setMembers] = useState<MemberApi[]>([])
   const [waypoints, setWaypoints] = useState<WaypointApi[]>([])
@@ -228,6 +231,29 @@ export default function Dashboard({ onNavigate }: Props) {
   const systemCount = waypoints.length
   const pinnedMissions = missions.filter(m => prefs.pinnedMissionIds.includes(m.id))
   const pinnedSystems = waypoints.filter(w => prefs.pinnedSystemIds.includes(w.system.id))
+
+  function startEditingDescription() {
+    setDescriptionDraft(squadron?.description ?? "")
+    setEditingDescription(true)
+  }
+
+  async function saveDescription() {
+    setSavingDescription(true)
+    try {
+      const res = await fetch("/api/squadron", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ description: descriptionDraft }),
+      })
+      if (res.ok) {
+        setSquadron(await res.json())
+        setEditingDescription(false)
+      }
+    } finally {
+      setSavingDescription(false)
+    }
+  }
 
   async function togglePin(list: "pinnedMissionIds" | "pinnedSystemIds", id: string) {
     const current = prefs[list]
@@ -271,7 +297,48 @@ export default function Dashboard({ onNavigate }: Props) {
             <div className="font-orbitron text-xl font-bold mb-1 text-glow-amber" style={{ color: "#f28c1a" }}>
               [{squadron.tag}] {squadron.nom.toUpperCase()}
             </div>
-            <div className="font-jbmono text-xs" style={{ color: "#8aabca" }}>{squadron.description}</div>
+            {editingDescription ? (
+              <div className="mt-1">
+                <textarea
+                  value={descriptionDraft}
+                  onChange={e => setDescriptionDraft(e.target.value)}
+                  rows={2}
+                  className="w-full font-jbmono text-xs bg-transparent outline-none px-2 py-1.5 clip-corner-sm resize-none"
+                  style={{ color: "#8aabca", border: "1px solid #1c3050" }}
+                />
+                <div className="flex gap-2 mt-1.5">
+                  <button
+                    onClick={saveDescription}
+                    disabled={savingDescription || !descriptionDraft.trim()}
+                    className="font-orbitron text-[10px] px-2.5 py-1 clip-corner-sm tracking-wider transition-all disabled:opacity-50"
+                    style={{ color: "#f28c1a", background: "rgba(242,140,26,0.12)", border: "1px solid rgba(242,140,26,0.35)" }}
+                  >
+                    {savingDescription ? "…" : "ENREGISTRER"}
+                  </button>
+                  <button
+                    onClick={() => setEditingDescription(false)}
+                    className="font-orbitron text-[10px] px-2.5 py-1 clip-corner-sm tracking-wider transition-all"
+                    style={{ color: "#3d5878", border: "1px solid #12223a", background: "transparent" }}
+                  >
+                    ANNULER
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="group flex items-start gap-2">
+                <div className="font-jbmono text-xs" style={{ color: "#8aabca" }}>{squadron.description}</div>
+                {canManagePins && (
+                  <button
+                    onClick={startEditingDescription}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity font-orbitron text-[10px] flex-shrink-0"
+                    style={{ color: "#3d5878" }}
+                    title="Modifier la description"
+                  >
+                    ✎
+                  </button>
+                )}
+              </div>
+            )}
             <div className="mt-3 flex gap-6">
               <div><span className="font-jbmono text-[12px]" style={{ color: "#3d5878" }}>FONDÉ · </span><span className="font-jbmono text-[12px]" style={{ color: "#8aabca" }}>{squadron.fondation}</span></div>
               <div><span className="font-jbmono text-[12px]" style={{ color: "#3d5878" }}>COMMANDANT · </span><span className="font-jbmono text-[12px]" style={{ color: "#f28c1a" }}>CMDR {squadron.commandant ?? "—"}</span></div>

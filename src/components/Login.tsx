@@ -118,17 +118,31 @@ export default function Login() {
           <div className="font-jbmono text-[11px] leading-relaxed mb-3" style={{ color: "#3d5878" }}>
             <span style={{ color: "#8aabca" }}>EDMC (Elite Dangerous Market Connector)</span> avec le plugin BLRF est requis pour le bon fonctionnement de l'application : localisation, vaisseaux, colonisation et influence des factions ne se mettent à jour qu'avec lui.
           </div>
-          <a
-            href="https://github.com/EDCD/EDMarketConnector/releases/latest"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full flex items-center justify-center font-orbitron text-[11px] px-4 py-2 clip-corner-sm tracking-widest transition-all"
-            style={{ color: "#2196f3", background: "rgba(33,150,243,0.08)", border: "1px solid rgba(33,150,243,0.3)" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(33,150,243,0.15)" }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(33,150,243,0.08)" }}
-          >
-            TÉLÉCHARGER EDMC ↗
-          </a>
+          <div className="flex gap-2">
+            <a
+              href="https://github.com/EDCD/EDMarketConnector/releases/latest"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center font-orbitron text-[11px] px-3 py-2 clip-corner-sm tracking-wider transition-all text-center"
+              style={{ color: "#2196f3", background: "rgba(33,150,243,0.08)", border: "1px solid rgba(33,150,243,0.3)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(33,150,243,0.15)" }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(33,150,243,0.08)" }}
+            >
+              1. EDMC ↗
+            </a>
+            <a
+              href="/api/plugin/edmc-download"
+              className="flex-1 flex items-center justify-center font-orbitron text-[11px] px-3 py-2 clip-corner-sm tracking-wider transition-all text-center"
+              style={{ color: "#f28c1a", background: "rgba(242,140,26,0.08)", border: "1px solid rgba(242,140,26,0.3)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(242,140,26,0.15)" }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(242,140,26,0.08)" }}
+            >
+              2. PLUGIN BLRF ↓
+            </a>
+          </div>
+          <div className="font-jbmono text-[10px] mt-2 leading-relaxed" style={{ color: "#1c3050" }}>
+            Installez d'abord EDMC, puis copiez le dossier du plugin téléchargé dans son dossier de plugins (Fichier &gt; Paramètres &gt; Plugins &gt; Ouvrir le dossier des plugins).
+          </div>
         </div>
       </div>
     </div>

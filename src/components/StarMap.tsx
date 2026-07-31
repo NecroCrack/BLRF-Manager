@@ -46,14 +46,16 @@ function distanceFromSol(sys: WaypointApi["system"]): string {
   return `${d.toFixed(1)} al`
 }
 
-// Cadrage auto sur les systèmes épinglés (projection X/Z, comme le reste du rendu) ;
-// Sol reste toujours dans le cadre comme repère. Sans épinglage, vue par défaut inchangée.
+// Cadrage auto sur les systèmes épinglés (projection X/Z, comme le reste du rendu) : centré
+// purement sur leur boîte englobante, Sol n'y est plus forcé (l'escadron n'opère pas forcément
+// près de la Bulle Humaine — Sol reste affiché s'il est dans le cadre, jamais imposé hors champ
+// réel). Sans épinglage, vue par défaut inchangée (centrée sur Sol).
 function computeFit(pinned: WaypointApi[]): { scale: number; pan: { x: number; y: number } } {
   if (pinned.length === 0) {
     return { scale: BASE_SCALE, pan: { x: SVG_W / 2, y: SVG_H / 2 - 40 } }
   }
-  const xs = [0, ...pinned.map(w => w.system.coordX)]
-  const zs = [0, ...pinned.map(w => w.system.coordZ)]
+  const xs = pinned.map(w => w.system.coordX)
+  const zs = pinned.map(w => w.system.coordZ)
   const minX = Math.min(...xs), maxX = Math.max(...xs)
   const minZ = Math.min(...zs), maxZ = Math.max(...zs)
   const spanX = Math.max(maxX - minX, 20)
