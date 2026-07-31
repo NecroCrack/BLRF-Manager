@@ -324,9 +324,13 @@ app.get('/api/health', (req, res) => {
 app.get('/api/plugin/edmc-download', (req, res) => {
   try {
     const pluginDir = path.join(import.meta.dirname, '..', 'edmc-plugin');
+    // Fichiers à plat dans le zip (pas de dossier "edmc-plugin/" à l'intérieur) : Windows crée
+    // déjà un dossier nommé d'après le zip à l'extraction ("Extraire tout") — un dossier en plus
+    // à l'intérieur produirait load.py à un niveau de trop une fois copié dans le dossier plugins
+    // d'EDMC, qui ne le trouverait jamais (vécu en réel : EDMC listait le plugin comme "cassé").
     const zip = createZip([
-      { name: 'edmc-plugin/load.py', data: fs.readFileSync(path.join(pluginDir, 'load.py')) },
-      { name: 'edmc-plugin/README.md', data: fs.readFileSync(path.join(pluginDir, 'README.md')) },
+      { name: 'load.py', data: fs.readFileSync(path.join(pluginDir, 'load.py')) },
+      { name: 'README.md', data: fs.readFileSync(path.join(pluginDir, 'README.md')) },
     ]);
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', 'attachment; filename="blrf-squadron-manager-edmc-plugin.zip"');

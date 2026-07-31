@@ -21,6 +21,7 @@ jeton (voir README.md de ce dossier).
 import json
 import threading
 import tkinter as tk
+from typing import Optional
 from urllib import request, error
 
 from config import config
@@ -87,7 +88,7 @@ def _post(path: str, payload: dict) -> None:
     threading.Thread(target=_send, daemon=True).start()
 
 
-def _extract_progress_pct(entry: dict) -> float | None:
+def _extract_progress_pct(entry: dict) -> Optional[float]:
     """Best-effort : le format exact de ConstructionProgress n'est pas garanti
     par ce plugin (jamais confirmé contre une vraie sortie de jeu). Renvoie None
     si aucun champ reconnu n'est trouvé plutôt que de deviner une valeur."""
