@@ -26,9 +26,10 @@ from urllib import request, error
 
 # Widgets de préférences EDMC : indispensable d'utiliser myNotebook (pas tkinter brut) pour que
 # l'onglet de configuration s'affiche et se thème correctement dans la fenêtre Paramètres — voir
-# PLUGINS.md officiel. Cause réelle trouvée par un membre : sans ça, l'onglet "BLRF Squadron
-# Manager" n'apparaissait pas du tout dans la fenêtre Paramètres, rendant le plugin impossible à
-# configurer bien qu'il se charge correctement.
+# PLUGINS.md officiel. Cause réelle trouvée par un membre (log EDMC : plugin chargé mais
+# get_prefs plantait) : le champ de saisie s'appelle EntryMenu dans ce module, pas Entry — confirmé
+# en désassemblant le myNotebook.pyc réellement embarqué dans l'installation EDMC de ce membre
+# (Frame/Label/EntryMenu existent, pas de classe "Entry" nue).
 import myNotebook as nb
 from config import config
 
@@ -125,11 +126,11 @@ def plugin_prefs(parent, cmdr, is_beta):
 
     nb.Label(frame, text="URL du serveur BLRF (ex. https://blrf-squadron-manager.onrender.com)").grid(row=0, column=0, sticky="w", padx=5, pady=(8, 2))
     server_url_var = tk.StringVar(value=config.get_str(CFG_SERVER_URL) or "")
-    nb.Entry(frame, textvariable=server_url_var, width=45).grid(row=1, column=0, sticky="we", padx=5)
+    nb.EntryMenu(frame, textvariable=server_url_var, width=45).grid(row=1, column=0, sticky="we", padx=5)
 
     nb.Label(frame, text="Jeton personnel (Paramètres de compte > Plugin EDMC)").grid(row=2, column=0, sticky="w", padx=5, pady=(8, 2))
     token_var = tk.StringVar(value=config.get_str(CFG_TOKEN) or "")
-    nb.Entry(frame, textvariable=token_var, width=45, show="•").grid(row=3, column=0, sticky="we", padx=5, pady=(0, 8))
+    nb.EntryMenu(frame, textvariable=token_var, width=45, show="•").grid(row=3, column=0, sticky="we", padx=5, pady=(0, 8))
 
     return frame
 
