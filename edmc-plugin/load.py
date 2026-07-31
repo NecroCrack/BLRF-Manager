@@ -19,6 +19,7 @@ jeton (voir README.md de ce dossier).
 """
 
 import json
+import logging
 import threading
 import tkinter as tk
 from typing import Optional
@@ -31,9 +32,15 @@ from urllib import request, error
 # en désassemblant le myNotebook.pyc réellement embarqué dans l'installation EDMC de ce membre
 # (Frame/Label/EntryMenu existent, pas de classe "Entry" nue).
 import myNotebook as nb
-from config import config
+from config import appname, config
 
 PLUGIN_NAME = "BLRF Squadron Manager"
+
+# Logger standard EDMC (visible dans logs/EDMarketConnector.log, Fichier > Statut dans EDMC) —
+# avant ce correctif, aucune erreur d'envoi n'était tracée nulle part malgré ce qu'affirmait ce
+# docstring : un jeton invalide, un 403 ou une panne réseau échouaient de façon totalement
+# silencieuse. Le code envoyé (401/403/404/429...) est loggé, jamais le jeton ni le contenu.
+logger = logging.getLogger(f'{appname}.{PLUGIN_NAME}')
 
 CFG_SERVER_URL = "blrf_server_url"
 CFG_TOKEN = "blrf_api_token"
@@ -41,9 +48,11 @@ CFG_TOKEN = "blrf_api_token"
 # Événements journal signalant un changement de système.
 LOCATION_EVENTS = {"FSDJump", "Location", "CarrierJump"}
 
-# Seuls ces deux événements portent le tableau "Factions" (influence par faction locale) —
-# vérifié le 30/07/2026 : Docked ne le contient PAS (juste un StationFaction sans influence).
-FACTION_EVENTS = {"FSDJump", "Location"}
+# Ces trois événements portent le tableau "Factions" (influence par faction locale) — vérifié le
+# 30/07/2026 : Docked ne le contient PAS (juste un StationFaction sans influence). CarrierJump le
+# porte aussi, au même titre que FSDJump/Location (schéma communautaire EDCD) — initialement
+# oublié ici le 30/07/2026 alors que LOCATION_EVENTS l'incluait déjà, corrigé le 31/07/2026.
+FACTION_EVENTS = {"FSDJump", "Location", "CarrierJump"}
 
 # Nom d'événement journal pour la progression d'un chantier de colonisation.
 # Format confirmé (schéma communautaire EDCD + forums Frontier, 30/07/2026) : l'événement
@@ -87,10 +96,15 @@ def _post(path: str, payload: dict) -> None:
                 },
             )
             request.urlopen(req, timeout=10)
-        except error.URLError:
-            pass  # Serveur injoignable : ignoré, réessaiera au prochain événement.
-        except Exception:
-            pass  # Ne jamais remonter d'exception dans le thread EDMC.
+        except error.HTTPError as e:
+            # Jeton invalide (401), permission refusée (403), système introuvable (404), quota EDSM
+            # dépassé (429)... Jamais bloquant pour le jeu, mais désormais visible dans le log EDMC
+            # plutôt que totalement invisible — sans réessai automatique, comme avant ce correctif.
+            logger.warning(f"Échec de l'envoi vers {path} : HTTP {e.code}")
+        except error.URLError as e:
+            logger.warning(f"Serveur BLRF injoignable pour {path} : {e.reason}")
+        except Exception as e:
+            logger.warning(f"Erreur inattendue lors de l'envoi vers {path} : {e}")
 
     threading.Thread(target=_send, daemon=True).start()
 

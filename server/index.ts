@@ -736,7 +736,7 @@ app.post('/api/members/me/heartbeat', requireAuth, async (req, res) => {
 });
 
 app.patch('/api/members/me/profile', requireAuth, async (req, res) => {
-  const { pseudo, localisation, vaisseau, vaisseauModele, specialite } = req.body ?? {};
+  const { pseudo, localisation, vaisseau, vaisseauModele, specialite, localisationAuto } = req.body ?? {};
   const clean = (v: unknown) => (typeof v === 'string' ? v.trim().slice(0, 200) || null : undefined);
 
   const cleanPseudo = typeof pseudo === 'string' ? pseudo.trim() : undefined;
@@ -744,16 +744,29 @@ app.patch('/api/members/me/profile', requireAuth, async (req, res) => {
     res.status(400).json({ error: 'Le pseudo ne peut pas être vide.' });
     return;
   }
+  // Cette route ne peut que DÉSACTIVER le mode automatique (repli manuel volontaire du membre) —
+  // jamais l'activer : seul le plugin EDMC (POST /api/plugin/location, jeton porteur) le fait.
+  if (localisationAuto !== undefined && localisationAuto !== false) {
+    res.status(400).json({ error: 'Seule la désactivation de la localisation automatique est autorisée ici.' });
+    return;
+  }
+
+  // Tant que le mode auto reste actif, le champ localisation n'est ni affiché ni éditable côté
+  // client : ignorer toute valeur reçue pour ce champ évite d'écraser silencieusement en base une
+  // ancienne saisie manuelle avec le nom du système auto-détecté (bug corrigé le 31/07/2026).
+  const current = await prisma.member.findUnique({ where: { id: req.user!.sub }, select: { localisationAuto: true } });
+  const stillAuto = localisationAuto === false ? false : (current?.localisationAuto ?? false);
 
   try {
     const member = await prisma.member.update({
       where: { id: req.user!.sub },
       data: {
         ...(cleanPseudo !== undefined && { pseudo: cleanPseudo }),
-        ...(clean(localisation) !== undefined && { localisation: clean(localisation) }),
+        ...(!stillAuto && clean(localisation) !== undefined && { localisation: clean(localisation) }),
         ...(clean(vaisseau) !== undefined && { vaisseau: clean(vaisseau) }),
         ...(clean(vaisseauModele) !== undefined && { vaisseauModele: clean(vaisseauModele) }),
         ...(clean(specialite) !== undefined && { specialite: clean(specialite) }),
+        ...(localisationAuto === false && { localisationAuto: false }),
       },
       include: rosterMemberInclude,
     });
@@ -907,10 +920,12 @@ app.post('/api/plugin/colonisation', requirePluginToken, async (req, res) => {
   // Le MarketID (identifiant stable du dépôt côté jeu) est prioritaire sur le nom : un site
   // peut être renommé une fois la construction terminée, ce que le nom seul ne peut pas suivre.
   // Repli sur systemId+name pour les sites ajoutés manuellement avant tout rapport du plugin.
+  // Insensible à la casse : un site ajouté manuellement puis rapporté par le plugin avec une casse
+  // différente (ou l'inverse) doit fusionner sur la même ligne, jamais créer un doublon.
   const existing = marketIdStr
     ? (await prisma.colonisationSite.findUnique({ where: { marketId: marketIdStr } }))
-      ?? (await prisma.colonisationSite.findFirst({ where: { systemId: system.id, name: name.trim() } }))
-    : await prisma.colonisationSite.findFirst({ where: { systemId: system.id, name: name.trim() } });
+      ?? (await prisma.colonisationSite.findFirst({ where: { systemId: system.id, name: { equals: name.trim(), mode: 'insensitive' } } }))
+    : await prisma.colonisationSite.findFirst({ where: { systemId: system.id, name: { equals: name.trim(), mode: 'insensitive' } } });
 
   if (!existing) {
     const canAdd = await memberHasPermission(prisma, req.pluginMember!.roleId, 'colonisation.add');
@@ -982,6 +997,9 @@ app.post('/api/plugin/build', requirePluginToken, async (req, res) => {
       modules: parsed.modules as unknown as Prisma.InputJsonValue,
     },
     update: {
+      // Garde le nom affiché à jour si le vaisseau a été rebaptisé au Chantier Naval depuis le
+      // dernier rapport (sinon il restait figé sur le nom donné lors de la toute première synchro).
+      nom: parsed.shipName ? `${parsed.shipName} (${parsed.shipDisplayName})` : parsed.shipDisplayName,
       vaisseauModele: parsed.shipDisplayName,
       modules: parsed.modules as unknown as Prisma.InputJsonValue,
       ...(modulesChanged && { status: 'EN_ATTENTE' as BuildStatus }),
@@ -1060,7 +1078,7 @@ app.post('/api/colonisation', requireAuth, requirePermission('colonisation.add')
     create: { name: coords.name, coordX: coords.coordX, coordY: coords.coordY, coordZ: coords.coordZ },
   });
 
-  const existing = await prisma.colonisationSite.findFirst({ where: { systemId: system.id, name: name.trim() } });
+  const existing = await prisma.colonisationSite.findFirst({ where: { systemId: system.id, name: { equals: name.trim(), mode: 'insensitive' } } });
   if (existing) {
     res.status(409).json({ error: 'Ce site est déjà suivi pour ce système.' });
     return;
@@ -1093,6 +1111,9 @@ function toPublicFactionSummary(latest: Prisma.FactionSnapshotGetPayload<{ inclu
     etatsEnAttente: latest.pendingStates,
     controle: latest.isControlling,
     estEscadron: latest.faction.isSquadron || latest.faction.isSquadronManual,
+    // Distinct d'estEscadron : permet au client de savoir qu'un retrait manuel serait un no-op
+    // silencieux (isSquadron, confirmé par le jeu via SquadronFaction, n'est jamais rétrogradé).
+    estEscadronConfirmeParLeJeu: latest.faction.isSquadron,
     source: latest.source,
     dateMaj: latest.recordedAt,
     tendance: previous ? Math.round((latest.influence - previous.influence) * 1000) / 1000 : null,
@@ -1311,7 +1332,7 @@ app.patch('/api/factions/:id', requireAuth, requirePermission('squadron.manage')
       where: { id: req.params.id as string },
       data: { isSquadronManual },
     });
-    res.json({ id: faction.id, nom: faction.name, estEscadron: faction.isSquadron || faction.isSquadronManual });
+    res.json({ id: faction.id, nom: faction.name, estEscadron: faction.isSquadron || faction.isSquadronManual, estEscadronConfirmeParLeJeu: faction.isSquadron });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
       res.status(404).json({ error: 'Faction introuvable.' });

@@ -12,6 +12,13 @@ export interface BuildCommentApi {
   reviewer: string
 }
 
+export interface LoadoutEngineeringApi {
+  blueprint: string
+  level: number
+  quality: number | null
+  experimentalEffect: string | null
+}
+
 export interface LoadoutModuleApi {
   slot: string
   item: string
@@ -20,6 +27,7 @@ export interface LoadoutModuleApi {
   rating: string | null
   on: boolean
   priority: number | null
+  engineering: LoadoutEngineeringApi | null
 }
 
 export interface ShipBuildApi {
@@ -347,14 +355,22 @@ export default function Builds() {
                     {selected.modules.map((m, i) => (
                       <div
                         key={`${m.slot}-${i}`}
-                        className="flex items-center justify-between gap-2 px-2.5 py-1.5 clip-corner-sm"
+                        className="px-2.5 py-1.5 clip-corner-sm"
                         style={{ background: "#040810", border: "1px solid #0c1828", opacity: m.on ? 1 : 0.45 }}
                       >
-                        <span className="font-jbmono text-[11px] truncate" style={{ color: "#8aabca" }}>{m.name}</span>
-                        {(m.class || m.rating) && (
-                          <span className="font-jbmono text-[10px] flex-shrink-0" style={{ color: "#3d5878" }}>
-                            {m.class ?? ""}{m.rating ?? ""}
-                          </span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-jbmono text-[11px] truncate" style={{ color: "#8aabca" }}>{m.name}</span>
+                          {(m.class || m.rating) && (
+                            <span className="font-jbmono text-[10px] flex-shrink-0" style={{ color: "#3d5878" }}>
+                              {m.class ?? ""}{m.rating ?? ""}
+                            </span>
+                          )}
+                        </div>
+                        {m.engineering && (
+                          <div className="font-jbmono text-[10px] mt-0.5 truncate" style={{ color: "#f28c1a" }}>
+                            ⚙ {m.engineering.blueprint} G{m.engineering.level}
+                            {m.engineering.experimentalEffect ? ` · ${m.engineering.experimentalEffect}` : ""}
+                          </div>
                         )}
                       </div>
                     ))}

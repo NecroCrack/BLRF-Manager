@@ -26,6 +26,34 @@ function prettifyModuleItem(item: string): string {
   return item.replace(/^(int|hpt)_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+// Best-effort sur le sous-objet "Engineering" d'un module de l'événement Loadout — absent si le
+// module n'est pas ingénieré. Quality change à chaque réingénierie (même plan/grade) : l'inclure
+// suffit à faire détecter tout changement d'ingénierie par la comparaison canonicalJson en aval,
+// sans avoir à modéliser le tableau "Modifiers" complet.
+function parseEngineering(raw: unknown): PublicLoadoutEngineering | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const eng = raw as Record<string, unknown>;
+  const blueprintName = typeof eng.BlueprintName === 'string' && eng.BlueprintName.trim() ? eng.BlueprintName : null;
+  if (!blueprintName) return null;
+  const experimentalLocalised = typeof eng.ExperimentalEffect_Localised === 'string' && eng.ExperimentalEffect_Localised.trim()
+    ? eng.ExperimentalEffect_Localised
+    : null;
+  const experimentalRaw = typeof eng.ExperimentalEffect === 'string' && eng.ExperimentalEffect.trim() ? eng.ExperimentalEffect : null;
+  return {
+    blueprint: prettifyModuleItem(blueprintName),
+    level: typeof eng.Level === 'number' ? eng.Level : 0,
+    quality: typeof eng.Quality === 'number' ? eng.Quality : null,
+    experimentalEffect: experimentalLocalised ?? (experimentalRaw ? prettifyModuleItem(experimentalRaw) : null),
+  };
+}
+
+export interface PublicLoadoutEngineering {
+  blueprint: string;
+  level: number;
+  quality: number | null;
+  experimentalEffect: string | null;
+}
+
 export interface PublicLoadoutModule {
   slot: string;
   item: string;
@@ -34,6 +62,10 @@ export interface PublicLoadoutModule {
   rating: string | null;
   on: boolean;
   priority: number | null;
+  // Plan d'ingénierie appliqué (sous-objet "Engineering" du module dans l'événement Loadout).
+  // null si le module n'est pas ingénieré. Inclus dans la comparaison canonicalJson côté appelant :
+  // un changement de grade/qualité/effet expérimental doit repasser le build en "En attente".
+  engineering: PublicLoadoutEngineering | null;
 }
 
 // JSONB Postgres ne préserve pas l'ordre des clés d'un objet (contrairement à JSON.stringify sur
@@ -84,6 +116,7 @@ export function parseLoadout(raw: unknown): ParsedLoadout | null {
       rating: info?.rating ?? null,
       on: typeof mod.On === 'boolean' ? mod.On : true,
       priority: typeof mod.Priority === 'number' ? mod.Priority : null,
+      engineering: parseEngineering(mod.Engineering),
     });
   }
 

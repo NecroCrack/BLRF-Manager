@@ -165,6 +165,21 @@ function MemberDetail({ member, isSelf, canAdminister, onClose, onUpdated }: { m
     }
   }
 
+  async function disableAutoLocalisation() {
+    setSaving(true)
+    try {
+      const res = await fetch("/api/members/me/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ localisationAuto: false }),
+      })
+      if (res.ok) onUpdated(await res.json())
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function changeRole(roleId: string) {
     setChangingRole(true)
     try {
@@ -244,8 +259,18 @@ function MemberDetail({ member, isSelf, canAdminister, onClose, onUpdated }: { m
       {editing ? (
         <div className="space-y-2 mb-4">
           {member.localisationAuto && (
-            <div className="font-jbmono text-[11px] px-2 py-1.5 clip-corner-sm" style={{ color: "#0fc882", background: "rgba(15,200,130,0.08)" }}>
-              Localisation gérée automatiquement par le plugin EDMC.
+            <div className="font-jbmono text-[11px] px-2 py-1.5 clip-corner-sm flex items-center justify-between gap-2" style={{ color: "#0fc882", background: "rgba(15,200,130,0.08)" }}>
+              <span>Localisation gérée automatiquement par le plugin EDMC.</span>
+              {isSelf && (
+                <button
+                  onClick={disableAutoLocalisation}
+                  disabled={saving}
+                  className="font-orbitron text-[10px] underline flex-shrink-0 disabled:opacity-50"
+                  style={{ color: "#8aabca" }}
+                >
+                  Repasser en manuel
+                </button>
+              )}
             </div>
           )}
           {[

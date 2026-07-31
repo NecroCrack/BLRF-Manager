@@ -11,6 +11,10 @@ interface FactionSummaryApi {
   humeur: string | null
   controle: boolean
   estEscadron: boolean
+  // Distinct d'estEscadron : true seulement si confirmé par le jeu lui-même (SquadronFaction).
+  // Ce flag n'est jamais rétrogradé par le serveur — un retrait manuel serait un no-op silencieux
+  // si on tentait de l'appliquer dessus, d'où la distinction faite dans l'UI (bouton ci-dessous).
+  estEscadronConfirmeParLeJeu: boolean
   source: "PLUGIN" | "EDSM"
   dateMaj: string
   tendance: number | null
@@ -162,13 +166,23 @@ function SystemDetailPanel({ systemId, onClose }: { systemId: string; onClose: (
                     </div>
                   )}
                   {canManage && (
-                    <button
-                      onClick={() => toggleSquadron(f.factionId, f.estEscadron)}
-                      className="font-orbitron text-[9px] mt-1.5 tracking-wider transition-colors"
-                      style={{ color: f.estEscadron ? "#e53030" : "#3d5878" }}
-                    >
-                      {f.estEscadron ? "✕ RETIRER \"NOTRE FACTION\"" : "★ MARQUER COMME NOTRE FACTION"}
-                    </button>
+                    f.estEscadronConfirmeParLeJeu ? (
+                      <div
+                        className="font-jbmono text-[9px] mt-1.5"
+                        style={{ color: "#3d5878" }}
+                        title="Le jeu lui-même confirme cette faction comme liée au Squadron (SquadronFaction) — non modifiable manuellement."
+                      >
+                        ★ Confirmée par le jeu — non modifiable
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => toggleSquadron(f.factionId, f.estEscadron)}
+                        className="font-orbitron text-[9px] mt-1.5 tracking-wider transition-colors"
+                        style={{ color: f.estEscadron ? "#e53030" : "#3d5878" }}
+                      >
+                        {f.estEscadron ? "✕ RETIRER \"NOTRE FACTION\"" : "★ MARQUER COMME NOTRE FACTION"}
+                      </button>
+                    )
                   )}
                 </div>
               ))}
